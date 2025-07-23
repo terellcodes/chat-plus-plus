@@ -1,26 +1,71 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* IDE Dark Theme Colors */
+  --background: #1e1e1e;
+  --foreground: #d4d4d4;
+  --panel-bg: #252526;
+  --border: #3e3e42;
+  --accent: #007acc;
+  --success: #4ec9b0;
+  --warning: #dcdcaa;
+  --error: #f44747;
+  --muted: #6a9955;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-panel-bg: var(--panel-bg);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-muted: var(--muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Custom scrollbar for IDE feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Power-up animations */
+@keyframes powerUp {
+  0% { transform: scale(1); box-shadow: none; }
+  50% { transform: scale(1.05); box-shadow: 0 0 20px var(--accent); }
+  100% { transform: scale(1); box-shadow: 0 0 10px var(--accent); }
+}
+
+.power-up {
+  animation: powerUp 0.3s ease-in-out;
+}
+
+.strategy-glow {
+  box-shadow: 0 0 15px var(--accent);
+  border-color: var(--accent);
 }
