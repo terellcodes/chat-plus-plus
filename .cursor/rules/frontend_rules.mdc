@@ -1,0 +1,505 @@
+---
+description: For frontend tasks
+alwaysApply: false
+---
+# Cursor Rules Reference
+
+## Component Rules
+
+### When to Create a New Component
+- Line count exceeds 100 lines
+- Component is used in 2 or more places
+- Logic requires more than 3 hooks
+- Component has multiple internal states
+- UI section can be logically isolated
+- Component represents a specific feature
+
+### Component Structure
+1. File Organization:
+   - Imports at the top
+   - Types/interfaces
+   - Hooks
+   - Derived state calculations
+   - Event handlers
+   - Effects
+   - Render function
+
+2. Directory Structure:
+   ```
+   src/components/
+   ├── feature/     # Feature-specific components
+   ├── shared/      # Reusable components
+   └── layout/      # Layout components
+   ```
+
+3. Required Files:
+   - `index.ts` (for exports)
+   - `types.ts` (for component types)
+
+### Props Guidelines
+- Use TypeScript interfaces
+- Avoid deep nesting in prop structures
+- Minimize optional props
+- Add JSDoc for complex props
+- Keep props flat and simple
+
+## Service Rules
+
+### API Service Structure
+1. Required Sections:
+   - Logging utility
+   - API configuration
+   - Conversion helpers
+   - API methods
+   - Utility methods
+   - Exported functions
+
+2. Logging Requirements:
+   - Development-only logging
+   - Include info, success, warn, error levels
+   - Use emoji prefixes for visual distinction
+
+3. Error Handling:
+   - Centralized error handling
+   - Include detail and status code
+   - Consistent error structure
+
+4. Patterns:
+   - Use singleton pattern
+   - Implement request wrapper
+   - Maintain type safety
+   - Handle API responses consistently
+
+## Type Rules
+
+### Organization
+1. Section Order:
+   - Core backend types
+   - API request/response types
+   - Frontend UI types
+   - Component props
+   - API error types
+   - Utility types
+   - Helper function types
+
+2. Naming Conventions:
+   - Interfaces: PascalCase
+   - Types: PascalCase
+   - Props: ComponentNameProps
+   - State: StatePrefix
+   - Enums: PascalCase
+
+### Type Safety
+- No `any` types
+- Enable strict null checks
+- Prefer interfaces for objects
+- Use generics where appropriate
+- Document complex types
+
+## Constants Rules
+
+### Organization
+1. API Configuration:
+   - Must include BASE_URL
+   - Define all ENDPOINTS
+   - Specify DEFAULT_HEADERS
+
+2. App Configuration:
+   - Use SCREAMING_SNAKE_CASE
+   - Include comments for all constants
+   - Group related constants
+
+### Environment Variables
+- Prefix client-side vars with NEXT_PUBLIC_
+- Always provide fallback values
+- Never expose secrets
+- Document all variables
+
+## Next.js Configuration Rules
+
+### Required Sections
+1. TypeScript Setup:
+   - Enable strict mode
+   - Configure path aliases
+   - Set compiler options
+
+2. Security Headers:
+   - X-DNS-Prefetch-Control
+   - X-XSS-Protection
+   - X-Frame-Options
+   - X-Content-Type-Options
+   - Referrer-Policy
+
+3. Performance:
+   - Enable SWC minification
+   - Remove console in production
+   - Optimize CSS
+   - Configure chunking
+
+### Image Optimization
+- Configure allowed domains
+- Set device sizes
+- Enable WebP format
+- Optimize loading strategies
+
+## Vercel Configuration Rules
+
+### Required Fields
+- Project name
+- Version number
+- Framework specification
+- Build commands
+- Output directory
+
+### Security
+1. Headers:
+   - X-Frame-Options
+   - X-Content-Type-Options
+   - Referrer-Policy
+
+2. Functions:
+   - Set maximum duration (30s)
+   - Validate timeouts
+   - Configure memory limits
+
+## Environment Rules
+
+### Required Files
+- .env.example
+- .env.local
+- .env.development
+- .env.production
+
+### Security Rules
+- No secrets in public files
+- Document all variables
+- Use appropriate prefixes
+- Keep sensitive data private
+
+## File Structure Rules
+
+### Required Directories
+```
+src/
+├── components/   # React components
+├── services/     # API services
+├── lib/          # Shared utilities
+├── types/        # TypeScript types
+└── app/          # Next.js pages
+```
+
+### Naming Conventions
+- Components: PascalCase
+- Services: camelCase
+- Types: camelCase
+- Constants: camelCase
+
+## Documentation Rules
+
+### Components
+- JSDoc for component definition
+- Document all props
+- Include usage examples
+- Note side effects
+
+### Types
+- Document complex types
+- Include example usage
+- Note type constraints
+- Explain generic parameters
+
+### Services
+- Document methods
+- Include return types
+- Note side effects
+- Document error cases
+
+## Testing Rules
+
+### Required Tests
+1. Components:
+   - Unit tests
+   - Integration tests
+   - Snapshot tests
+
+2. Services:
+   - Unit tests
+   - Integration tests
+
+3. Utils:
+   - Unit tests
+
+### Coverage Requirements
+- Minimum 80% coverage
+- Exclude test files
+- Exclude story files
+- Track coverage trends
+
+## Ignored Files
+- *.test.ts
+- *.test.tsx
+- *.stories.tsx
+- *.d.ts
+- node_modules
+- .next
+- coverage
+
+## Best Practices Enforcement
+- Run linting on save
+- Enforce type checking
+- Check prop types
+- Validate file structure
+- Monitor code quality
+- Track test coverage
+- Enforce naming conventions
+- Check documentation completeness # Cursor Rules Reference
+
+## Component Rules
+
+### When to Create a New Component
+- Line count exceeds 100 lines
+- Component is used in 2 or more places
+- Logic requires more than 3 hooks
+- Component has multiple internal states
+- UI section can be logically isolated
+- Component represents a specific feature
+
+### Component Structure
+1. File Organization:
+   - Imports at the top
+   - Types/interfaces
+   - Hooks
+   - Derived state calculations
+   - Event handlers
+   - Effects
+   - Render function
+
+2. Directory Structure:
+   ```
+   src/components/
+   ├── feature/     # Feature-specific components
+   ├── shared/      # Reusable components
+   └── layout/      # Layout components
+   ```
+
+3. Required Files:
+   - `index.ts` (for exports)
+   - `types.ts` (for component types)
+
+### Props Guidelines
+- Use TypeScript interfaces
+- Avoid deep nesting in prop structures
+- Minimize optional props
+- Add JSDoc for complex props
+- Keep props flat and simple
+
+## Service Rules
+
+### API Service Structure
+1. Required Sections:
+   - Logging utility
+   - API configuration
+   - Conversion helpers
+   - API methods
+   - Utility methods
+   - Exported functions
+
+2. Logging Requirements:
+   - Development-only logging
+   - Include info, success, warn, error levels
+   - Use emoji prefixes for visual distinction
+
+3. Error Handling:
+   - Centralized error handling
+   - Include detail and status code
+   - Consistent error structure
+
+4. Patterns:
+   - Use singleton pattern
+   - Implement request wrapper
+   - Maintain type safety
+   - Handle API responses consistently
+
+## Type Rules
+
+### Organization
+1. Section Order:
+   - Core backend types
+   - API request/response types
+   - Frontend UI types
+   - Component props
+   - API error types
+   - Utility types
+   - Helper function types
+
+2. Naming Conventions:
+   - Interfaces: PascalCase
+   - Types: PascalCase
+   - Props: ComponentNameProps
+   - State: StatePrefix
+   - Enums: PascalCase
+
+### Type Safety
+- No `any` types
+- Enable strict null checks
+- Prefer interfaces for objects
+- Use generics where appropriate
+- Document complex types
+
+## Constants Rules
+
+### Organization
+1. API Configuration:
+   - Must include BASE_URL
+   - Define all ENDPOINTS
+   - Specify DEFAULT_HEADERS
+
+2. App Configuration:
+   - Use SCREAMING_SNAKE_CASE
+   - Include comments for all constants
+   - Group related constants
+
+### Environment Variables
+- Prefix client-side vars with NEXT_PUBLIC_
+- Always provide fallback values
+- Never expose secrets
+- Document all variables
+
+## Next.js Configuration Rules
+
+### Required Sections
+1. TypeScript Setup:
+   - Enable strict mode
+   - Configure path aliases
+   - Set compiler options
+
+2. Security Headers:
+   - X-DNS-Prefetch-Control
+   - X-XSS-Protection
+   - X-Frame-Options
+   - X-Content-Type-Options
+   - Referrer-Policy
+
+3. Performance:
+   - Enable SWC minification
+   - Remove console in production
+   - Optimize CSS
+   - Configure chunking
+
+### Image Optimization
+- Configure allowed domains
+- Set device sizes
+- Enable WebP format
+- Optimize loading strategies
+
+## Vercel Configuration Rules
+
+### Required Fields
+- Project name
+- Version number
+- Framework specification
+- Build commands
+- Output directory
+
+### Security
+1. Headers:
+   - X-Frame-Options
+   - X-Content-Type-Options
+   - Referrer-Policy
+
+2. Functions:
+   - Set maximum duration (30s)
+   - Validate timeouts
+   - Configure memory limits
+
+## Environment Rules
+
+### Required Files
+- .env.example
+- .env.local
+- .env.development
+- .env.production
+
+### Security Rules
+- No secrets in public files
+- Document all variables
+- Use appropriate prefixes
+- Keep sensitive data private
+
+## File Structure Rules
+
+### Required Directories
+```
+src/
+├── components/   # React components
+├── services/     # API services
+├── lib/          # Shared utilities
+├── types/        # TypeScript types
+└── app/          # Next.js pages
+```
+
+### Naming Conventions
+- Components: PascalCase
+- Services: camelCase
+- Types: camelCase
+- Constants: camelCase
+
+## Documentation Rules
+
+### Components
+- JSDoc for component definition
+- Document all props
+- Include usage examples
+- Note side effects
+
+### Types
+- Document complex types
+- Include example usage
+- Note type constraints
+- Explain generic parameters
+
+### Services
+- Document methods
+- Include return types
+- Note side effects
+- Document error cases
+
+## Testing Rules
+
+### Required Tests
+1. Components:
+   - Unit tests
+   - Integration tests
+   - Snapshot tests
+
+2. Services:
+   - Unit tests
+   - Integration tests
+
+3. Utils:
+   - Unit tests
+
+### Coverage Requirements
+- Minimum 80% coverage
+- Exclude test files
+- Exclude story files
+- Track coverage trends
+
+## Ignored Files
+- *.test.ts
+- *.test.tsx
+- *.stories.tsx
+- *.d.ts
+- node_modules
+- .next
+- coverage
+
+## Best Practices Enforcement
+- Run linting on save
+- Enforce type checking
+- Check prop types
+- Validate file structure
+- Monitor code quality
+- Track test coverage
+- Enforce naming conventions
+- Check documentation completeness 

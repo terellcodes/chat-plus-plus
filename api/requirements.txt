@@ -1,0 +1,18 @@
+# Main dependencies
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+pydantic==2.6.1
+pydantic-settings==2.1.0
+python-dotenv==1.0.1
+sqlalchemy==2.0.27
+alembic==1.13.1
+mangum==0.17.0  # For AWS Lambda / Vercel serverless
+
+# Development dependencies
+pytest==8.0.1
+pytest-asyncio==0.23.5
+httpx==0.26.0  # For testing
+black==24.2.0  # Code formatting
+isort==5.13.2  # Import sorting
+flake8==7.0.0  # Linting
+mypy==1.8.0    # Type checking 

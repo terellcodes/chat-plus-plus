@@ -1,0 +1,251 @@
+---
+description: For backend and api tasks
+alwaysApply: false
+---
+# FastAPI Cursor Rules Reference
+
+## Main Application (`main.py`)
+
+### Required Structure
+1. **Import Section**
+   - Must include: fastapi, CORS middleware, asynccontextmanager
+   - Organized by: standard lib → third party → local imports
+
+2. **Lifespan Management**
+   - Must use `@asynccontextmanager` decorator
+   - Must implement startup and shutdown handlers
+   - Pattern: `async def lifespan(app: FastAPI)`
+
+3. **Application Factory**
+   - Must implement `create_application()` function
+   - Must configure all core features
+   - Must follow standard initialization order
+
+4. **Required Features**
+   - CORS configuration
+   - Logging setup
+   - Exception handling
+   - Health check endpoint
+
+### Section Order
+1. Imports
+2. Lifespan function
+3. Application factory
+4. CORS setup
+5. App instance creation
+6. Middleware configuration
+7. Exception handlers
+8. Health check endpoint
+
+## Configuration (`/config`)
+
+### Settings File
+1. **Required Class**
+   - Must extend `BaseSettings`
+   - Must include core application fields
+   - Must validate environment variables
+
+2. **Required Fields**
+   - APP_NAME
+   - APP_DESCRIPTION
+   - APP_VERSION
+   - ALLOWED_ORIGINS
+
+3. **Environment Variables**
+   - Must use SCREAMING_SNAKE_CASE
+   - Must include documentation
+   - Must implement validation
+
+## Models (`/models`)
+
+### Directory Structure
+```
+models/
+├── domain/      # Business logic models
+├── schemas/     # API schemas
+└── database/    # ORM models
+```
+
+### Rules
+1. **Pydantic Models**
+   - Must extend BaseModel
+   - Must include Config class
+   - Must use explicit field types
+
+2. **Database Models**
+   - Must use snake_case for tables
+   - Must document relationships
+   - Must extend Base class
+
+## Services (`/services`)
+
+### Structure Requirements
+1. **Base Class**
+   - Must implement base service class
+   - Must use dependency injection
+   - Must handle errors properly
+
+2. **Method Rules**
+   - Use snake_case naming
+   - Include explicit return types
+   - Require docstrings
+   - Implement error handling
+
+3. **Design Patterns**
+   - Prefer singleton pattern
+   - Require repository pattern
+   - Recommend unit of work pattern
+
+## API Routes (`/api`)
+
+### Versioning
+1. **Requirements**
+   - Must implement versioning
+   - Must use pattern: v{number}
+   - Must include in URL structure
+
+2. **Endpoint Rules**
+   - Use snake_case naming
+   - Require documentation
+   - Specify response models
+   - Handle errors properly
+
+3. **Router Organization**
+   - Organize by feature
+   - Require route prefixes
+   - Include appropriate tags
+
+## Core Functionality (`/core`)
+
+### Required Modules
+1. **Security**
+   - Authentication implementation
+   - Authorization logic
+   - Password hashing
+   - JWT handling
+   - Rate limiting
+
+2. **Exceptions**
+   - Custom exception classes
+   - Exception handlers
+   - Error responses
+
+3. **Events**
+   - Startup handlers
+   - Shutdown handlers
+   - Resource management
+
+## Utilities (`/utils`)
+
+### Function Requirements
+1. **Implementation**
+   - Prefer pure functions
+   - Require error handling
+   - Include type hints
+   - Add docstrings
+
+2. **Organization**
+   - Group by functionality
+   - Follow single responsibility
+   - Keep utils focused
+
+## Background Tasks (`/tasks`)
+
+### Celery Configuration
+1. **Task Definition**
+   - Require task names
+   - Configure retry policies
+   - Optional queue assignment
+
+2. **Error Handling**
+   - Implement retry mechanism
+   - Use dead letter queues
+   - Monitor task status
+
+## Testing (`/tests`)
+
+### Organization
+1. **Directory Structure**
+   ```
+   tests/
+   ├── unit/          # By module
+   ├── integration/   # By feature
+   └── fixtures/      # Shared resources
+   ```
+
+2. **Naming Convention**
+   - Pattern: test_{feature}_{scenario}
+   - Must be descriptive
+   - Indicate test type
+
+3. **Coverage Requirements**
+   - Minimum 80% overall
+   - 90% for critical paths
+   - Track coverage trends
+
+## CORS Configuration
+
+### Development Settings
+```python
+origins = ["http://localhost:3000"]
+credentials = True
+```
+
+### Security Rules
+1. **Origins**
+   - No wildcards with credentials
+   - Explicit method specification
+   - Explicit header specification
+
+2. **Configuration**
+   - Environment-specific settings
+   - Secure credentials handling
+   - Proper header management
+
+## Documentation
+
+### API Documentation
+1. **OpenAPI**
+   - Required implementation
+   - Include examples
+   - Document schemas
+
+2. **Code Documentation**
+   - Required docstrings
+   - Type hints
+   - Usage examples
+
+## File Structure
+
+### Required Directories
+```
+api/
+├── api/          # Route handlers
+├── config/       # Configuration
+├── core/         # Core functionality
+├── models/       # Data models
+├── services/     # Business logic
+├── utils/        # Utilities
+├── tasks/        # Background tasks
+└── tests/        # Test suite
+```
+
+### Naming Conventions
+- Directories: snake_case
+- Files: snake_case
+- Classes: PascalCase
+- Functions: snake_case
+
+## Ignored Files and Directories
+1. **Files to Ignore**
+   - *.pyc
+   - *.pyo
+   - __pycache__
+   - Build artifacts
+   - Package files
+
+2. **Directories to Ignore**
+   - Virtual environments
+   - Git directory
+   - Cache directories
+   - Build directories 
