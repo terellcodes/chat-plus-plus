@@ -20,14 +20,14 @@ export default function ChatMessage({ message }: ChatMessageProps) {
           : 'bg-[#252526] text-[#d4d4d4] border border-[#3e3e42]'
       }`}>
         <div className="flex items-start space-x-2">
-          <div className="text-sm">
+          <div className="text-lg">
             {isUser ? '👤' : '🤖'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm whitespace-pre-wrap break-words">
+            <p className="text-lg whitespace-pre-wrap break-words">
               {message.content}
             </p>
-            <p className={`text-xs mt-1 ${
+            <p className={`text-base mt-1 ${
               isUser ? 'text-blue-100' : 'text-[#6a9955]'
             }`}>
               {message.timestamp.toLocaleTimeString()}

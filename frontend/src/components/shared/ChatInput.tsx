@@ -39,22 +39,22 @@ export default function ChatInput({ onSendMessage, disabled = false, placeholder
           placeholder={placeholder}
           disabled={disabled}
           rows={1}
-          className="w-full px-3 py-2 bg-[#252526] border border-[#3e3e42] rounded text-[#d4d4d4] text-sm focus:border-[#007acc] focus:outline-none resize-none"
-          style={{ minHeight: '38px', maxHeight: '120px' }}
+          className="w-full px-4 py-3 bg-[#252526] border border-[#3e3e42] rounded text-[#d4d4d4] text-lg focus:border-[#007acc] focus:outline-none resize-none"
+          style={{ minHeight: '48px', maxHeight: '150px' }}
         />
       </div>
       <button
         type="button"
         onClick={() => setMessage('')}
         disabled={!message.trim() || disabled}
-        className="px-3 py-2 bg-[#252526] border border-[#3e3e42] rounded text-[#d4d4d4] hover:bg-[#2d2d30] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="px-4 py-3 bg-[#252526] border border-[#3e3e42] rounded text-[#d4d4d4] text-lg hover:bg-[#2d2d30] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         Clear
       </button>
       <button
         type="submit"
         disabled={!message.trim() || disabled}
-        className="px-4 py-2 bg-[#007acc] text-white rounded hover:bg-[#005a9e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="px-5 py-3 bg-[#007acc] text-white text-lg rounded hover:bg-[#005a9e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         Send
       </button>

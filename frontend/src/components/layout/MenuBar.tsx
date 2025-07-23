@@ -34,7 +34,7 @@ export default function MenuBar({ onSettingsClick }: MenuBarProps) {
       <nav className="flex items-center space-x-6">
         <a 
           href="/docs" 
-          className="text-[#d4d4d4] hover:text-[#007acc] transition-colors text-sm"
+          className="text-[#d4d4d4] hover:text-[#007acc] transition-colors text-lg"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -42,7 +42,7 @@ export default function MenuBar({ onSettingsClick }: MenuBarProps) {
         </a>
         <a 
           href="https://github.com/your-username/chat-plus-plus" 
-          className="text-[#d4d4d4] hover:text-[#007acc] transition-colors text-sm flex items-center space-x-1"
+          className="text-[#d4d4d4] hover:text-[#007acc] transition-colors text-lg flex items-center space-x-1"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -51,12 +51,6 @@ export default function MenuBar({ onSettingsClick }: MenuBarProps) {
           </svg>
           <span>GitHub</span>
         </a>
-        <button 
-          onClick={onSettingsClick}
-          className="text-[#d4d4d4] hover:text-[#007acc] transition-colors text-sm"
-        >
-          Settings
-        </button>
       </nav>
     </header>
   );

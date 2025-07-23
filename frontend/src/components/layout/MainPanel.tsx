@@ -17,13 +17,13 @@ export default function MainPanel({ configuration, chatSession, onSendMessage, o
       <main className="flex-1 bg-[#1e1e1e] flex items-center justify-center">
         <div className="max-w-md text-center space-y-4">
           <div className="text-4xl mb-4">🤖</div>
-          <h2 className="text-[#d4d4d4] text-xl font-semibold">
+          <h2 className="text-[#d4d4d4] text-2xl font-semibold">
             Welcome to Chat++
           </h2>
-          <p className="text-[#6a9955] text-sm leading-relaxed">
+          <p className="text-[#6a9955] text-lg leading-relaxed">
             To get started, please configure the following in the left panel:
           </p>
-          <ul className="space-y-2 text-sm">
+          <ul className="space-y-2 text-lg">
             {!configuration.openaiApiKey && (
               <li className="flex items-center space-x-2 text-[#f44747]">
                 <span>❌</span>
@@ -54,14 +54,14 @@ export default function MainPanel({ configuration, chatSession, onSendMessage, o
       <div className="h-12 bg-[#2d2d30] border-b border-[#3e3e42] flex items-center justify-between px-4">
         <div className="flex items-center space-x-2">
           <div className="w-2 h-2 bg-[#4ec9b0] rounded-full"></div>
-          <span className="text-[#d4d4d4] text-sm">
+          <span className="text-[#d4d4d4] text-lg">
             {configuration.selectedDocument?.filename}
           </span>
         </div>
         {hasMessages && (
           <button
             onClick={onClearChat}
-            className="text-[#d4d4d4] hover:text-[#f44747] text-sm transition-colors"
+            className="text-[#d4d4d4] hover:text-[#f44747] text-lg transition-colors"
           >
             Clear Chat
           </button>
@@ -74,10 +74,10 @@ export default function MainPanel({ configuration, chatSession, onSendMessage, o
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-4">
               <div className="text-4xl">💬</div>
-              <h3 className="text-[#d4d4d4] text-lg">
+              <h3 className="text-[#d4d4d4] text-xl">
                 Ready to chat!
               </h3>
-              <p className="text-[#6a9955] text-sm">
+              <p className="text-[#6a9955] text-lg">
                 Ask questions about your PDF document
               </p>
             </div>
