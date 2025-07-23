@@ -35,3 +35,18 @@ If there are UI components in the screenshot that match what needs to be built b
             - conversation should be streamed
         - Chat Input to take user Input
             - inclde clear and send button 
+
+Task #2: API Foundation
+1. Create endpoint to upload PDF to QDrant in memory store
+- this should be part of a service called Document Service
+- create a schema for the request and response object, store it in the model directory
+- the vector store should be accessible as a singleton
+- for now it will only create a simple vector store, but later we will add support for multiple storage solutions. one for each retrieval strategy.
+2. Create and endpoint to take chat input and return RAG chat response
+input: openai api key, retrieval strategies, human input
+- use the singleton vector store
+- create a schema for the request and response object, store it in the model directory
+- create Retrieval Service: 
+    - for now only support naive retrieval using vectore store singleton
+    - view @Advanced_Retrieval_with_LangChain_Assingment.ipynb notebook to see how to implement a naive retrieval chain
+    - create a new directory called chains and include it in a file there.

@@ -1,11 +1,17 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
 from config.settings import get_settings, Settings
 from utils.constants import ResponseMessage, StatusCode
+from services.document import DocumentService
+from services.retrieval import RetrievalService
+from models.schemas.chat import ChatRequest, ChatResponse
 
+# Initialize services
+document_service = DocumentService()
+retrieval_service = RetrievalService()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -59,15 +65,84 @@ async def health_check():
     }
 
 
-@app.get("/api/info")
-async def get_api_info(settings: Settings = Depends(get_settings)):
-    """Example endpoint using settings"""
-    return {
-        "name": settings.APP_NAME,
-        "version": settings.APP_VERSION,
-        "description": settings.APP_DESCRIPTION,
-        "debug_mode": settings.DEBUG
-    }
+@app.post("/upload")
+async def upload_pdf(
+    file: UploadFile = File(...),
+    openai_api_key: str = None
+):
+    """Upload a PDF file and process it for RAG"""
+    if not file.filename.endswith('.pdf'):
+        print(f"Invalid file type: {file.filename}")
+        return {
+            "status": ResponseMessage.ERROR,
+            "code": StatusCode.HTTP_400_BAD_REQUEST,
+            "message": "Only PDF files are supported"
+        }
+    
+    if not openai_api_key:
+        print("Missing OpenAI API key")
+        return {
+            "status": ResponseMessage.ERROR,
+            "code": StatusCode.HTTP_400_BAD_REQUEST,
+            "message": "OpenAI API key is required"
+        }
+    
+    try:
+        print(f"Processing PDF file: {file.filename}")
+        result = await document_service.process_pdf(
+            file.file,
+            file.filename,
+            openai_api_key
+        )
+        print(f"Successfully processed PDF file: {file.filename}")
+        return {
+            "status": ResponseMessage.SUCCESS,
+            "code": StatusCode.HTTP_200_OK,
+            "data": result
+        }
+    except Exception as e:
+        print(f"Error processing PDF file: {file.filename}. Error: {str(e)}")
+        return {
+            "status": ResponseMessage.ERROR,
+            "code": StatusCode.HTTP_500_INTERNAL_SERVER_ERROR,
+            "message": str(e)
+        }
+
+
+# @app.post("/chat", response_model=ChatResponse)
+@app.post("/chat")
+async def chat(request: ChatRequest):
+    """Chat endpoint with RAG support"""
+    try:
+        print(f"Processing chat request with message: {request.message}")
+        result = await retrieval_service.get_response(
+            request.openai_api_key,
+            request.message,
+            request.retrieval_strategies,
+            request.chat_history
+        )
+        print("Successfully processed chat request")
+        return result
+        # return ChatResponse(
+        #     status=ResponseMessage.SUCCESS,
+        #     code=StatusCode.HTTP_200_OK,
+        #     data=ChatResponseData(**result)
+        # )
+    except ValueError as e:
+        print(f"Validation error in chat request: {str(e)}")
+        return {
+            "status": ResponseMessage.ERROR,
+            "code": StatusCode.HTTP_400_BAD_REQUEST,
+            "message": str(e)
+        }
+    except Exception as e:
+        print(f"Error processing chat request: {str(e)}")
+        return {
+            "status": ResponseMessage.ERROR,
+            "code": StatusCode.HTTP_500_INTERNAL_SERVER_ERROR,
+            "message": str(e)
+        }
+
 
 # Handler for Vercel serverless
 handler = Mangum(app)

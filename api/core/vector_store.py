@@ -1,0 +1,70 @@
+from typing import Optional, List
+import numpy as np
+from qdrant_client import QdrantClient
+from qdrant_client.http import models
+from qdrant_client.http.models import Distance, VectorParams
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.vectorstores import Qdrant
+
+class VectorStore:
+    """Singleton vector store using QDrant"""
+    _instance: Optional['VectorStore'] = None
+    _client: Optional[QdrantClient] = None
+    _collection_name: str = "documents"
+    _dimension: int = 1536  # OpenAI embedding dimension
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(VectorStore, cls).__new__(cls)
+            # Initialize in-memory QDrant client
+            cls._client = QdrantClient(":memory:")
+            # Create collection
+            cls._client.recreate_collection(
+                collection_name=cls._collection_name,
+                vectors_config=VectorParams(
+                    size=cls._dimension,
+                    distance=Distance.COSINE
+                )
+            )
+        return cls._instance
+
+    def get_client(self) -> QdrantClient:
+        """Get the QDrant client instance"""
+        return self._client
+
+    def get_langchain_store(self, openai_api_key: str) -> Qdrant:
+        """Get a LangChain Qdrant wrapper with embeddings"""
+        embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+        return Qdrant(
+            client=self._client,
+            collection_name=self._collection_name,
+            embeddings=embeddings
+        )
+
+    def add_texts(
+        self,
+        texts: List[str],
+        metadatas: List[dict],
+        embeddings: List[List[float]]
+    ) -> List[str]:
+        """Add texts with their embeddings to the vector store"""
+        # Generate random IDs for the points
+        ids = [str(np.random.randint(0, 1000000)) for _ in texts]
+        
+        # Add points to the collection
+        self._client.upsert(
+            collection_name=self._collection_name,
+            points=[
+                models.PointStruct(
+                    id=id_,
+                    payload={"text": text, **metadata},
+                    vector=embedding
+                )
+                for id_, text, metadata, embedding 
+                in zip(ids, texts, metadatas, embeddings)
+            ]
+        )
+        
+        return ids
+
+vector_store = VectorStore() 
