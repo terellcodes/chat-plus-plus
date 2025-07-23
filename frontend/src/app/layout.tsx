@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Chat++ | PDF RAG IDE",
+  title: "Chat++ | Advanced RAG Chat Application",
   description: "An intelligent chat application with advanced RAG strategies for PDF analysis",
   keywords: ["RAG", "PDF", "AI", "Chat", "Document Analysis"],
 };

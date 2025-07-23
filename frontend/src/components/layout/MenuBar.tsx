@@ -11,12 +11,21 @@ export default function MenuBar({ onSettingsClick }: MenuBarProps) {
     <header className="h-12 bg-[#2d2d30] border-b border-[#3e3e42] flex items-center justify-between px-4">
       {/* Logo Section */}
       <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 bg-[#007acc] rounded flex items-center justify-center">
-            <span className="text-white text-xs font-bold">C++</span>
+        <div className="flex items-center space-x-3">
+          {/* Animated Chat++ Logo */}
+          <div className="relative">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#007acc] to-[#4ec9b0] rounded-lg flex items-center justify-center shadow-lg">
+              <div className="text-white text-sm font-bold logo-float">💬</div>
+            </div>
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#f44747] rounded-full flex items-center justify-center plus-pulse">
+              <span className="text-white text-xs font-bold">+</span>
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-[#dcdcaa] rounded-full flex items-center justify-center plus-pulse" style={{animationDelay: '1s'}}>
+              <span className="text-[#1e1e1e] text-xs font-bold">+</span>
+            </div>
           </div>
-          <h1 className="text-[#d4d4d4] font-mono text-lg font-semibold">
-            PDF RAG IDE
+          <h1 className="text-[#d4d4d4] font-mono text-lg font-bold tracking-wider">
+            Chat<span className="text-[#007acc]">++</span>
           </h1>
         </div>
       </div>

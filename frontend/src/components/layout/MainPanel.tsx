@@ -18,7 +18,7 @@ export default function MainPanel({ configuration, chatSession, onSendMessage, o
         <div className="max-w-md text-center space-y-4">
           <div className="text-4xl mb-4">🤖</div>
           <h2 className="text-[#d4d4d4] text-xl font-semibold">
-            Welcome to PDF RAG IDE
+            Welcome to Chat++
           </h2>
           <p className="text-[#6a9955] text-sm leading-relaxed">
             To get started, please configure the following in the left panel:
