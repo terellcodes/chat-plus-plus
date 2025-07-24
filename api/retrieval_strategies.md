@@ -627,7 +627,7 @@ class RetrievalService:
         self,
         message: str,
         retrieval_strategies: List[str],
-        combine_results: bool = False,
+        weights: List[float] = None,  # Optional weights for ensemble
         **kwargs
     ) -> Dict[str, Any]:
         """Get response using specified retrieval strategies"""
@@ -641,56 +641,28 @@ class RetrievalService:
         if missing:
             raise ValueError(f"Strategies not initialized: {missing}")
             
-        # Execute strategies in parallel
-        tasks = [
-            self.strategies[name].run(message, **kwargs)
-            for name in retrieval_strategies
-        ]
-        
-        results = await asyncio.gather(*tasks)
-        
-        if combine_results and len(results) > 1:
-            # Create ensemble from results
-            combined = await self._combine_results(
-                results,
-                retrieval_strategies
-            )
-            return {
-                "combined": combined,
-                "individual": dict(zip(retrieval_strategies, results))
-            }
+        # If only one strategy, use it directly
+        if len(retrieval_strategies) == 1:
+            return await self.strategies[retrieval_strategies[0]].run(message, **kwargs)
             
-        return dict(zip(retrieval_strategies, results))
-        
-    async def _combine_results(
-        self,
-        results: List[Dict[str, Any]],
-        strategy_names: List[str]
-    ) -> Dict[str, Any]:
-        """Combine results from multiple strategies"""
-        # Simple averaging of answers
-        answers = [r["answer"] for r in results]
-        
-        # Use an ensemble chain to combine answers
-        ensemble_prompt = ChatPromptTemplate.from_template(
-            "Given these different answers to the same question, "
-            "provide a comprehensive response that combines the best "
-            "insights from each:\n\n{answers}\n\nCombined answer:"
+        # For multiple strategies, use ensemble strategy
+        ensemble = EnsembleRetrieval(
+            strategies=retrieval_strategies,
+            weights=weights,
+            k=kwargs.get('k', 5)
         )
         
-        ensemble_chain = (
-            {"answers": lambda x: "\n\n".join(answers)}
-            | ensemble_prompt
-            | ChatOpenAI(temperature=0)
-        )
+        # Setup ensemble with same vector store and API key as other strategies
+        example_strategy = self.strategies[retrieval_strategies[0]]
+        vector_store = example_strategy._retriever.vectorstore
+        openai_api_key = kwargs.get('openai_api_key')
         
-        result = await ensemble_chain.ainvoke({})
+        await ensemble.setup(vector_store, openai_api_key, **kwargs)
         
-        return {
-            "answer": result.content,
-            "strategy": "ensemble",
-            "sub_strategies": strategy_names
-        }
+        # Run ensemble strategy
+        result = await ensemble.run(message, **kwargs)
+        
+        return result
 ```
 
 ### Modified DocumentService
@@ -766,7 +738,7 @@ result = await retrieval_service.get_response(
 )
 ```
 
-2. Using multiple strategies in parallel:
+2. Using multiple strategies (automatically uses ensemble):
 ```python
 # Initialize multiple strategies
 await retrieval_service.initialize_strategies(
@@ -774,15 +746,15 @@ await retrieval_service.initialize_strategies(
     openai_api_key
 )
 
-# Get responses from all strategies
-results = await retrieval_service.get_response(
+# Get responses using ensemble strategy automatically
+result = await retrieval_service.get_response(
     "How does vector search work?",
     ["naive_retrieval", "multi_query", "parent_document"],
-    combine_results=True  # Combine results using ensemble
+    weights=[0.4, 0.3, 0.3]  # Optional weights for strategies
 )
 ```
 
-3. Using ensemble strategy:
+3. Using explicit ensemble strategy:
 ```python
 # Initialize ensemble with specific strategies
 await retrieval_service.initialize_strategies(
@@ -842,7 +814,7 @@ result = await retrieval_service.get_response(
 )
 ```
 
-7. Comparing Multiple Approaches:
+7. Comparing Multiple Strategies:
 ```python
 # Initialize multiple strategies
 await retrieval_service.initialize_strategies(
@@ -855,8 +827,8 @@ await retrieval_service.initialize_strategies(
     openai_api_key
 )
 
-# Get and compare responses
-results = await retrieval_service.get_response(
+# Get response using ensemble to combine all strategies
+result = await retrieval_service.get_response(
     "How does vector search work?",
     [
         "naive_retrieval",
@@ -864,7 +836,7 @@ results = await retrieval_service.get_response(
         "contextual_compression",
         "hybrid"
     ],
-    combine_results=True  # Use ensemble to combine all results
+    weights=[0.3, 0.3, 0.2, 0.2]  # Optional custom weights
 )
 ```
 
