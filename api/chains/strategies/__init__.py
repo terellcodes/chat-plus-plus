@@ -6,14 +6,14 @@ from .bm25 import BM25Retrieval
 from .ensemble import EnsembleRetrieval
 
 # Import strategies as they are implemented
-# from .naive import NaiveRetrieval
+# from chains.retrieval import NaiveRetrievalChain
 
 # Registry of available strategies
 STRATEGY_REGISTRY: Dict[str, Type[BaseRetrievalStrategy]] = {
     # Will be populated as strategies are implemented
     # "naive_retrieval": NaiveRetrieval,
-    "bm25": BM25Retrieval,
-    "ensemble": EnsembleRetrieval,
+    "bm25_retrieval": BM25Retrieval,
+    "ensemble_retrieval": EnsembleRetrieval,
 }
 
 def register_strategy(name: str, strategy_class: Type[BaseRetrievalStrategy]) -> None:

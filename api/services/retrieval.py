@@ -71,6 +71,7 @@ class RetrievalService:
         Returns:
             Response containing assistant's message and strategy info
         """
+        # breakpoint()
         # Validate strategies
         if not retrieval_strategies:
             raise ValueError("No retrieval strategies specified")
@@ -93,6 +94,7 @@ class RetrievalService:
             # If only one strategy, use it directly
             if len(configs) == 1:
                 logger.info(f"Using single strategy: {configs[0].name}")
+                # breakpoint()
                 result = await self.strategies[configs[0].name].run(message, **kwargs)
                 strategy_info = {
                     configs[0].name: StrategyResult(

@@ -1,10 +1,15 @@
 """Utility functions for retrieval strategies."""
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
+import logging
+from operator import itemgetter
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 from langchain_core.runnables import RunnablePassthrough
+from langchain_core.documents import Document
+
+logger = logging.getLogger(__name__)
 
 # Template for RAG responses
 RAG_TEMPLATE = """You are a helpful AI assistant answering questions based on the provided context.
@@ -40,6 +45,8 @@ def create_rag_chain(
     Returns:
         Configured RAG chain
     """
+    logger.info(f"Creating RAG chain with model {model}")
+    
     # Create prompt and model
     prompt = ChatPromptTemplate.from_template(RAG_TEMPLATE)
     llm = ChatOpenAI(
@@ -49,26 +56,59 @@ def create_rag_chain(
         **kwargs
     )
     
-    # Create and return chain
+    # Create chain using LCEL
     chain = (
         {
-            "context": retriever | _format_docs,
-            "question": RunnablePassthrough()
+            "context": itemgetter("question") | retriever | _format_docs,
+            "question": itemgetter("question")
         }
         | prompt
         | llm
         | StrOutputParser()
     )
     
+    logger.info("RAG chain created successfully")
     return chain
     
-def _format_docs(docs: List[Dict[str, Any]]) -> str:
+def _format_docs(docs: Union[List[Document], List[Dict[str, Any]]]) -> str:
     """Format retrieved documents into a string.
     
     Args:
-        docs: List of retrieved documents
+        docs: List of retrieved documents or dictionaries
         
     Returns:
         Formatted string of document contents
     """
-    return "\n\n".join(doc.page_content for doc in docs) 
+    if not docs:
+        logger.warning("No documents provided to format")
+        return ""
+        
+    logger.debug(f"Formatting {len(docs)} documents")
+    logger.debug(f"First document type: {type(docs[0]).__name__}")
+    
+    formatted_docs = []
+    for i, doc in enumerate(docs):
+        try:
+            if isinstance(doc, Document):
+                text = doc.page_content
+            elif isinstance(doc, dict):
+                text = doc.get("page_content", "")
+            else:
+                logger.warning(f"Unexpected document type at index {i}: {type(doc).__name__}")
+                continue
+                
+            if text and isinstance(text, str):
+                formatted_docs.append(text)
+            else:
+                logger.warning(f"Invalid or empty text at index {i}: {type(text).__name__}")
+                
+        except Exception as e:
+            logger.error(f"Error formatting document at index {i}: {str(e)}")
+            continue
+            
+    if not formatted_docs:
+        logger.warning("No valid documents found after formatting")
+        return ""
+        
+    logger.debug(f"Successfully formatted {len(formatted_docs)} documents")
+    return "\n\n".join(formatted_docs) 

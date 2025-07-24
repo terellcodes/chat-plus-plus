@@ -50,3 +50,13 @@ input: openai api key, retrieval strategies, human input
     - for now only support naive retrieval using vectore store singleton
     - view @Advanced_Retrieval_with_LangChain_Assingment.ipynb notebook to see how to implement a naive retrieval chain
     - create a new directory called chains and include it in a file there.
+
+
+
+Task #3: Support Multiple Retrieval Strategies
+- in the chat endpoint consume the list of retrieval strategies
+    - if only one strategy is selected generate the answer using that one strategy
+    - if multiple are selected use the ensemble strategy to apply all selected strategies to generate an answer
+- use `retrieval_stategies.md` to implement the strategies in an effective architecture
+    - make sure it is flexible
+- start by supporting BM25 then ensemble, then the rest of the strategies
