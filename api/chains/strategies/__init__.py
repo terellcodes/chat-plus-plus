@@ -4,14 +4,11 @@ from typing import Dict, Type
 from .base import BaseRetrievalStrategy
 from .bm25 import BM25Retrieval
 from .ensemble import EnsembleRetrieval
-
-# Import strategies as they are implemented
-# from chains.retrieval import NaiveRetrievalChain
+from .naive import NaiveRetrieval
 
 # Registry of available strategies
 STRATEGY_REGISTRY: Dict[str, Type[BaseRetrievalStrategy]] = {
-    # Will be populated as strategies are implemented
-    # "naive_retrieval": NaiveRetrieval,
+    "naive_retrieval": NaiveRetrieval,
     "bm25_retrieval": BM25Retrieval,
     "ensemble_retrieval": EnsembleRetrieval,
 }
