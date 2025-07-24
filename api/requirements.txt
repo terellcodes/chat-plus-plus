@@ -20,6 +20,11 @@ qdrant-client==1.7.0  # Version compatible with numpy 1.24.3
 rank-bm25==0.2.2     # For BM25 retrieval implementation
 langsmith==0.0.87    # Pinned version for stability
 
+# Dependencies for CrossEncoder reranking
+sentence-transformers>=2.2.0    # For Hugging Face cross-encoder models
+transformers>=4.21.0            # Required by sentence-transformers
+torch>=1.12.0                   # Required for model inference
+
 # Data processing
 numpy>=1.26.0  # Compatible with qdrant-client and Python 3.12+
 tiktoken==0.5.2

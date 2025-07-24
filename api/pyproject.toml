@@ -16,29 +16,29 @@ dependencies = [
     "alembic==1.13.1",
     "mangum==0.17.0",
     "python-multipart==0.0.6",
-
     # LangChain and related
     "langchain==0.1.0",
     "langchain-openai==0.0.2",
-    "langchain-community==0.0.19",  # Earlier version to avoid conflicts
-    "langchain-core==0.1.21",       # Version required by langchain-community
+    "langchain-community==0.0.19", # Earlier version to avoid conflicts
+    "langchain-core==0.1.21", # Version required by langchain-community
     "openai==1.97.1",
     "pypdf==3.17.1",
-    "qdrant-client==1.7.0",  # Version compatible with numpy 1.24.3
-    "rank-bm25==0.2.2",     # For BM25 retrieval implementation
-    "langsmith==0.0.87",     # Pinned version for stability
-    
+    "qdrant-client==1.7.0", # Version compatible with numpy 1.24.3
+    "rank-bm25==0.2.2", # For BM25 retrieval implementation
+    "langsmith==0.0.87", # Pinned version for stability
+    # Dependencies for CrossEncoder reranking
+    "sentence-transformers>=2.2.0", # For Hugging Face cross-encoder models
+    "transformers>=4.21.0", # Required by sentence-transformers
+    "torch>=1.12.0", # Required for model inference
     # Data processing
-    "numpy>=1.26.0",  # Compatible with qdrant-client and Python 3.12+
+    "numpy>=1.26.0", # Compatible with qdrant-client and Python 3.12+
     "tiktoken==0.5.2",
     "regex>=2022.1.18",
-    
     # HTTP and API
     "requests==2.32.4",
     "aiohttp==3.12.14",
-    "urllib3>=1.26.14,<2.0.0",  # Compatible with qdrant-client 1.7.0
+    "urllib3>=1.26.14,<2.0.0", # Compatible with qdrant-client 1.7.0
     "certifi>=2025.7.14",
-    
     # Utilities
     "tenacity==8.5.0",
     "PyYAML==6.0.2",
@@ -61,4 +61,17 @@ dev = [
     
     # Debugging
     "debugpy==1.8.15",
+]
+
+reranking = [
+    # Additional reranking models for contextual compression (disabled due to version conflicts)
+    # "voyageai>=0.2.0",                   # VoyageAI reranking
+    # "flashrank>=0.2.0",                  # Fast local reranking
+    # "langchain-google-community>=1.0.0", # Google Vertex AI rerank
+    # Note: CrossEncoder dependencies are now in main requirements
+]
+
+all = [
+    # Include all optional dependencies
+    "chat-plus-plus-api[dev,reranking]",
 ]

@@ -24,7 +24,7 @@ const RAG_STRATEGIES: RagStrategyConfig[] = [
     powerLevel: 2
   },
   {
-    id: RagStrategy.CONTEXTUAL_COMPRESSION,
+    id: RagStrategy.CONTEXTUAL_COMPRESSION_RETRIEVAL,
     name: 'Contextual Compression',
     description: 'Context-aware filtering',
     icon: '🎯',

@@ -10,7 +10,7 @@ export interface ApiResponse<T = any> {
 export enum RagStrategy {
   NAIVE_RETRIEVAL = 'naive_retrieval',
   BM25_RETRIEVAL = 'bm25_retrieval',
-  CONTEXTUAL_COMPRESSION = 'contextual_compression',
+  CONTEXTUAL_COMPRESSION_RETRIEVAL = 'contextual_compression_retrieval',
   MULTI_QUERY_RETRIEVAL = 'multi_query_retrieval',
   PARENT_DOCUMENT_RETRIEVAL = 'parent_document_retrieval'
 }
