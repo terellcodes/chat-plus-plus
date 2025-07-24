@@ -4,9 +4,12 @@ from typing import List, Dict, Any, Optional
 from langchain_core.documents import Document
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.vectorstores import VectorStore
+import logging
 
 from .base import BaseRetrievalStrategy
 from .utils import create_rag_chain
+
+logger = logging.getLogger(__name__)
 
 class NaiveRetrieval(BaseRetrievalStrategy):
     """Naive retrieval strategy using simple vector similarity search.
@@ -31,6 +34,7 @@ class NaiveRetrieval(BaseRetrievalStrategy):
         super().__init__(k=k)
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        logger.info(f"🏗️ Initializing {self.name} with k={k}, chunk_size={chunk_size}, chunk_overlap={chunk_overlap}")
         
     async def setup(
         self,
@@ -50,10 +54,14 @@ class NaiveRetrieval(BaseRetrievalStrategy):
         if not isinstance(vector_store, VectorStore):
             raise ValueError("vector_store must be an instance of VectorStore")
             
+        logger.info(f"🔧 {self.name} setup: Creating vector similarity retriever with k={self.k}")
+        
         # Create retriever from vector store
         self._retriever = vector_store.as_retriever(
             search_kwargs={"k": self.k}
         )
+        
+        logger.info(f"⚙️ {self.name} setup: Setting up RAG chain")
         
         # Setup RAG chain
         self._chain = create_rag_chain(
@@ -62,6 +70,8 @@ class NaiveRetrieval(BaseRetrievalStrategy):
             callbacks=callbacks,
             **kwargs
         )
+        
+        logger.info(f"🎯 {self.name} setup completed successfully! Ready to process queries.")
         
     async def retrieve(
         self,
@@ -78,7 +88,10 @@ class NaiveRetrieval(BaseRetrievalStrategy):
             List of retrieved documents
         """
         self._validate_setup()
-        return self._retriever.get_relevant_documents(query)
+        logger.info(f"🔍 Running {self.name} retriever for query: '{query[:100]}{'...' if len(query) > 100 else ''}'")
+        documents = self._retriever.get_relevant_documents(query)
+        logger.info(f"📄 {self.name} returned {len(documents)} documents")
+        return documents
         
     async def run(
         self,
@@ -98,8 +111,12 @@ class NaiveRetrieval(BaseRetrievalStrategy):
         """
         self._validate_setup()
         
+        logger.info(f"🚀 Starting {self.name} chain execution for query: '{query[:100]}{'...' if len(query) > 100 else ''}'")
+        
         # Get response using RAG chain with proper input format
         result = await self._chain.ainvoke({"question": query})
+        
+        logger.info(f"✅ {self.name} completed successfully")
         
         return {
             "answer": result,

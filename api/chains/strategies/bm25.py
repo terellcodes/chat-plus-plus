@@ -2,6 +2,7 @@
 
 from typing import List, Dict, Any, Optional
 import io
+import logging
 from pypdf import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
@@ -11,6 +12,8 @@ from langchain_community.retrievers import BM25Retriever as LangChainBM25Retriev
 from .base import BaseRetrievalStrategy
 from .utils import create_rag_chain
 from core.document_store import document_store
+
+logger = logging.getLogger(__name__)
 
 class BM25Retrieval(BaseRetrievalStrategy):
     """BM25 retrieval strategy using LangChain's implementation.
@@ -40,6 +43,7 @@ class BM25Retrieval(BaseRetrievalStrategy):
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap
         )
+        logger.info(f"🏗️ Initializing {self.name} with k={k}, chunk_size={chunk_size}, chunk_overlap={chunk_overlap}")
         
     async def setup(
         self,
@@ -60,6 +64,8 @@ class BM25Retrieval(BaseRetrievalStrategy):
         stored_files = document_store.list_documents()
         if not stored_files:
             raise ValueError("No documents found for BM25 indexing")
+            
+        logger.info(f"🔧 {self.name} setup: Processing {len(stored_files)} documents for BM25 indexing")
             
         # Process each document with BM25-specific chunking
         documents = []
@@ -98,11 +104,15 @@ class BM25Retrieval(BaseRetrievalStrategy):
         if not documents:
             raise ValueError("No valid chunks found for BM25 indexing")
         
+        logger.info(f"📊 {self.name} setup: Created {len(documents)} chunks for BM25 indexing")
+        
         # Initialize BM25 retriever
         self._retriever = LangChainBM25Retriever.from_documents(
             documents,
             k=self.k
         )
+        
+        logger.info(f"🔍 {self.name} setup: BM25 retriever initialized with k={self.k}")
         
         # Setup RAG chain
         self._chain = create_rag_chain(
@@ -111,6 +121,8 @@ class BM25Retrieval(BaseRetrievalStrategy):
             callbacks=callbacks,
             **kwargs
         )
+        
+        logger.info(f"🎯 {self.name} setup completed successfully! Ready to process queries.")
         
     async def retrieve(
         self,
@@ -127,7 +139,10 @@ class BM25Retrieval(BaseRetrievalStrategy):
             List of retrieved documents
         """
         self._validate_setup()
-        return self._retriever.get_relevant_documents(query)
+        logger.info(f"🔍 Running {self.name} retriever for query: '{query[:100]}{'...' if len(query) > 100 else ''}'")
+        documents = self._retriever.get_relevant_documents(query)
+        logger.info(f"📄 {self.name} returned {len(documents)} documents using BM25 scoring")
+        return documents
         
     async def run(
         self,
@@ -146,8 +161,13 @@ class BM25Retrieval(BaseRetrievalStrategy):
             - strategy: Name of the strategy
         """
         self._validate_setup()
+        
+        logger.info(f"🚀 Starting {self.name} chain execution for query: '{query[:100]}{'...' if len(query) > 100 else ''}'")
+        
         # Get response using RAG chain with proper input format
         result = await self._chain.ainvoke({"question": query})
+        
+        logger.info(f"✅ {self.name} completed successfully")
         
         return {
             "answer": result,

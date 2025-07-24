@@ -53,6 +53,7 @@ class EnsembleRetrieval(BaseRetrievalStrategy):
         self._strategies: List[BaseRetrievalStrategy] = []
         self._llm = None
         self._prompt = None
+        logger.info(f"🏗️ Initializing {self.name} with strategies={strategies}, weights={self.weights}, k={k}")
 
     def _normalize_weights(self, weights: List[float]) -> List[float]:
         """Normalize weights to sum to 1.0."""
@@ -72,6 +73,8 @@ class EnsembleRetrieval(BaseRetrievalStrategy):
         # Import here to avoid circular import
         from . import STRATEGY_REGISTRY
         
+        logger.info(f"🔧 {self.name} setup: Initializing {len(self.strategy_names)} sub-strategies")
+        
         self._strategies = []
         setup_tasks = []
         
@@ -83,6 +86,7 @@ class EnsembleRetrieval(BaseRetrievalStrategy):
             if not strategy_class:
                 raise ValueError(f"Strategy {strategy_name} not found in registry")
                 
+            logger.info(f"⚙️ {self.name} setup: Setting up {strategy_name} strategy")
             strategy = strategy_class(k=self.k)
             self._strategies.append(strategy)
             setup_tasks.append(
@@ -95,9 +99,12 @@ class EnsembleRetrieval(BaseRetrievalStrategy):
             )
         
         # Set up all strategies in parallel
+        logger.info(f"🔄 {self.name} setup: Setting up all strategies in parallel")
         await asyncio.gather(*setup_tasks)
+        logger.info(f"✅ {self.name} setup: All sub-strategies initialized successfully")
         
         # Create custom chain components
+        logger.info(f"🔗 {self.name} setup: Creating custom chain components")
         self._prompt = ChatPromptTemplate.from_template(RAG_TEMPLATE)
         self._llm = ChatOpenAI(
             temperature=temperature,
@@ -106,6 +113,8 @@ class EnsembleRetrieval(BaseRetrievalStrategy):
             **kwargs
         )
         self._parser = StrOutputParser()
+        
+        logger.info(f"🎯 {self.name} setup completed successfully! Ready to process queries.")
 
     async def setup_with_strategies(
         self,
@@ -139,6 +148,9 @@ class EnsembleRetrieval(BaseRetrievalStrategy):
         """Retrieve documents from all strategies in parallel and combine results."""
         self._validate_setup()
         
+        logger.info(f"🔍 Running {self.name} retriever for query: '{query[:100]}{'...' if len(query) > 100 else ''}'")
+        logger.info(f"⚡ {self.name}: Running {len(self._strategies)} strategies in parallel: {self.strategy_names}")
+        
         # Run all retrievers in parallel
         retrieval_tasks = [
             strategy._safe_retrieve(query)
@@ -147,6 +159,10 @@ class EnsembleRetrieval(BaseRetrievalStrategy):
         
         # Gather results
         results = await asyncio.gather(*retrieval_tasks)
+        
+        # Log individual strategy results
+        for strategy_name, docs in zip(self.strategy_names, results):
+            logger.info(f"📄 {strategy_name} returned {len(docs)} documents")
         
         # Combine and score documents
         scored_docs: Dict[str, float] = {}  # doc_content -> score
@@ -172,7 +188,10 @@ class EnsembleRetrieval(BaseRetrievalStrategy):
             reverse=True
         )
         
-        return sorted_docs[:self.k]
+        final_docs = sorted_docs[:self.k]
+        logger.info(f"🎯 {self.name} combined results: {len(final_docs)} final documents after ensemble scoring")
+        
+        return final_docs
 
     def _format_docs(self, docs: List[Document]) -> str:
         """Format retrieved documents into a string."""
@@ -192,6 +211,7 @@ class EnsembleRetrieval(BaseRetrievalStrategy):
         This uses a custom chain implementation instead of LCEL.
         """
         self._validate_setup()
+        logger.info(f"🚀 Starting {self.name} chain execution for query: '{query[:100]}{'...' if len(query) > 100 else ''}'")
         
         try:
             # Step 1: Retrieve documents using ensemble
@@ -211,6 +231,8 @@ class EnsembleRetrieval(BaseRetrievalStrategy):
             
             # Step 5: Parse output
             answer = await self._parser.ainvoke(llm_response)
+            
+            logger.info(f"✅ {self.name} completed successfully using {len(self.strategy_names)} strategies")
             
             return {
                 "answer": answer,

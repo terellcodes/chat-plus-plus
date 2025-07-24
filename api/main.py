@@ -9,6 +9,14 @@ from services.document import DocumentService
 from services.retrieval import RetrievalService
 from models.schemas.chat import ChatRequest, ChatResponse
 from core.langsmith import init_langsmith
+import logging
+
+# Configure logging to show INFO level messages
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 # Initialize services
 document_service = DocumentService()
