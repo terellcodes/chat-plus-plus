@@ -28,7 +28,12 @@ class Settings(BaseSettings):
 
     # Environment
     ENVIRONMENT: str = "development"
-    
+
+    # LangSmith Settings
+    LANGSMITH_API_KEY: str = ""
+    LANGSMITH_PROJECT: str = "chat-plus-plus"
+    LANGSMITH_TRACING: str = "true"
+        
     class Config:
         env_file = ".env"
         case_sensitive = True

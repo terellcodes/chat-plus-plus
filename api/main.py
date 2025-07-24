@@ -8,6 +8,7 @@ from utils.constants import ResponseMessage, StatusCode
 from services.document import DocumentService
 from services.retrieval import RetrievalService
 from models.schemas.chat import ChatRequest, ChatResponse
+from core.langsmith import init_langsmith
 
 # Initialize services
 document_service = DocumentService()
@@ -21,6 +22,7 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     print("Starting up...")
+    init_langsmith()  # Initialize LangSmith
     yield
     # Shutdown
     print("Shutting down...")
@@ -118,7 +120,6 @@ async def chat(request: ChatRequest):
             request.openai_api_key,
             request.message,
             request.retrieval_strategies,
-            request.chat_history
         )
         print("Successfully processed chat request")
         return result
