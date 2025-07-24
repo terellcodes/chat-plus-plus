@@ -5,8 +5,8 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # Application Settings
-    APP_NAME: str = "FastNext Starter API"
-    APP_DESCRIPTION: str = "A FastAPI backend for the Fast Next Starter project"
+    APP_NAME: str = "Chat++ API"
+    APP_DESCRIPTION: str = "A FastAPI backend for the Chat++ project"
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
     
@@ -16,9 +16,11 @@ class Settings(BaseSettings):
     # CORS Settings
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:3000",  # Local frontend
+        "http://localhost:3001",  # Additional local frontend port
         "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
         "https://*.vercel.app",   # Vercel preview deployments
-        "https://chat-plus-plus.vercel.app"  # Production frontend (update this with your actual domain)
+        "https://chat-plus-plus.vercel.app"  # Production frontend
     ]
     ALLOWED_METHODS: List[str] = ["*"]
     ALLOWED_HEADERS: List[str] = ["*"]
