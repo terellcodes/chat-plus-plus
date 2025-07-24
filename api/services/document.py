@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import BinaryIO, Optional, List
 from pypdf import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents import Document
 
 from core.vector_store import vector_store
@@ -59,7 +59,6 @@ class DocumentService:
             # Create in-memory file and read PDF
             print("📚 Loading PDF content...")
             pdf_file = io.BytesIO(file_content)
-            # breakpoint()
             pdf = PdfReader(pdf_file)
             
             # Extract text from each page
@@ -81,7 +80,6 @@ class DocumentService:
             
             # Get total pages
             total_pages = len(pdf.pages)
-            # breakpoint()
             print(f"📋 PDF loaded successfully. Total pages: {total_pages}")
             
             # Split into chunks

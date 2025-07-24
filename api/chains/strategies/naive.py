@@ -78,7 +78,7 @@ class NaiveRetrieval(BaseRetrievalStrategy):
             List of retrieved documents
         """
         self._validate_setup()
-        return await self._safe_retrieve(query, **kwargs)
+        return self._retriever.get_relevant_documents(query)
         
     async def run(
         self,

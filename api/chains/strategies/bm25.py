@@ -127,7 +127,7 @@ class BM25Retrieval(BaseRetrievalStrategy):
             List of retrieved documents
         """
         self._validate_setup()
-        return await self._safe_retrieve(query, **kwargs)
+        return self._retriever.get_relevant_documents(query)
         
     async def run(
         self,
@@ -146,7 +146,6 @@ class BM25Retrieval(BaseRetrievalStrategy):
             - strategy: Name of the strategy
         """
         self._validate_setup()
-        
         # Get response using RAG chain with proper input format
         result = await self._chain.ainvoke({"question": query})
         

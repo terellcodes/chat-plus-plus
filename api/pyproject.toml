@@ -16,7 +16,6 @@ dependencies = [
     "alembic==1.13.1",
     "mangum==0.17.0",
     "python-multipart==0.0.6",
-    "pypdf>=4.0.0",  # Add the version that uv installed
 
     # LangChain and related
     "langchain==0.1.0",
@@ -25,18 +24,19 @@ dependencies = [
     "langchain-core==0.1.21",       # Version required by langchain-community
     "openai==1.97.1",
     "pypdf==3.17.1",
-    "qdrant-client==1.15.0",
-    "langsmith>=0.0.77,<0.1.0",     # Version required by langchain
+    "qdrant-client==1.7.0",  # Version compatible with numpy 1.24.3
+    "rank-bm25==0.2.2",     # For BM25 retrieval implementation
+    "langsmith==0.0.87",     # Pinned version for stability
     
     # Data processing
-    "numpy==1.24.3",
+    "numpy>=1.26.0",  # Compatible with qdrant-client and Python 3.12+
     "tiktoken==0.5.2",
     "regex>=2022.1.18",
     
     # HTTP and API
     "requests==2.32.4",
     "aiohttp==3.12.14",
-    "urllib3==2.5.0",
+    "urllib3>=1.26.14,<2.0.0",  # Compatible with qdrant-client 1.7.0
     "certifi>=2025.7.14",
     
     # Utilities
@@ -44,7 +44,7 @@ dependencies = [
     "PyYAML==6.0.2",
     "typing-extensions>=4.8.0",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.9,<3.12"
 
 [project.optional-dependencies]
 dev = [

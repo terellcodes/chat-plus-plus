@@ -1,18 +1,37 @@
-"""Ensemble retrieval strategy implementation."""
+"""Ensemble retrieval strategy implementation with custom chain."""
 
 from typing import List, Dict, Any, Optional
-import numpy as np
+import asyncio
+import logging
 from langchain_core.documents import Document
 from langchain_core.callbacks import AsyncCallbackHandler
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_openai import ChatOpenAI
 
 from .base import BaseRetrievalStrategy
-from .utils import create_rag_chain
+
+logger = logging.getLogger(__name__)
+
+# Template for RAG responses
+RAG_TEMPLATE = """You are a helpful AI assistant answering questions based on the provided context.
+
+Context:
+{context}
+
+Question:
+{question}
+
+Please provide a clear, accurate, and helpful response based on the context above.
+If the context doesn't contain enough information to answer the question fully,
+acknowledge this and provide the best possible answer with the available information.
+
+Response:"""
 
 class EnsembleRetrieval(BaseRetrievalStrategy):
     """Ensemble retrieval strategy that combines multiple strategies.
     
-    This strategy allows combining multiple retrieval strategies with optional
-    weights to create a more robust retrieval system.
+    This strategy uses a custom chain implementation to avoid LCEL compatibility issues.
     """
     
     def __init__(
@@ -25,148 +44,217 @@ class EnsembleRetrieval(BaseRetrievalStrategy):
         
         Args:
             strategies: List of strategy names to combine
-            weights: Optional weights for each strategy (normalized if provided)
+            weights: Optional weights for each strategy (default: equal weights)
             k: Number of documents to retrieve per strategy
         """
         super().__init__(k=k)
         self.strategy_names = strategies
         self.weights = self._normalize_weights(weights or [1.0] * len(strategies))
         self._strategies: List[BaseRetrievalStrategy] = []
-        
+        self._llm = None
+        self._prompt = None
+
     def _normalize_weights(self, weights: List[float]) -> List[float]:
-        """Normalize weights to sum to 1.
-        
-        Args:
-            weights: List of weights
-            
-        Returns:
-            Normalized weights
-        """
+        """Normalize weights to sum to 1.0."""
         total = sum(weights)
-        if total == 0:
-            # If all weights are 0, use equal weights
-            return [1.0/len(weights)] * len(weights)
-        return [w/total for w in weights]
-        
+        return [w / total for w in weights]
+
     async def setup(
         self,
         vector_store: Any,
         openai_api_key: str,
         callbacks: Optional[List[AsyncCallbackHandler]] = None,
+        model: str = "gpt-4-1106-preview",
+        temperature: float = 0,
         **kwargs
     ) -> None:
-        """Initialize all component strategies.
-        
-        Args:
-            vector_store: Vector store for retrievals
-            openai_api_key: OpenAI API key
-            callbacks: Optional callbacks for monitoring
-            **kwargs: Additional setup parameters
-        """
+        """Set up all sub-strategies and create custom chain components."""
+        # Import here to avoid circular import
         from . import STRATEGY_REGISTRY
         
-        # Initialize each strategy
+        self._strategies = []
+        setup_tasks = []
+        
         for strategy_name in self.strategy_names:
-            if strategy_name not in STRATEGY_REGISTRY:
-                raise ValueError(f"Unknown strategy: {strategy_name}")
+            if strategy_name == self.name:
+                raise ValueError("Cannot use ensemble strategy within itself")
                 
-            strategy = STRATEGY_REGISTRY[strategy_name](k=self.k)
-            await strategy.setup(
-                vector_store,
-                openai_api_key,
-                callbacks=callbacks,
-                **kwargs
-            )
+            strategy_class = STRATEGY_REGISTRY.get(strategy_name)
+            if not strategy_class:
+                raise ValueError(f"Strategy {strategy_name} not found in registry")
+                
+            strategy = strategy_class(k=self.k)
             self._strategies.append(strategy)
-            
-        # Setup RAG chain
-        self._chain = create_rag_chain(
-            self,  # Ensemble implements retriever interface
-            openai_api_key,
-            callbacks=callbacks,
+            setup_tasks.append(
+                strategy.setup(
+                    vector_store=vector_store,
+                    openai_api_key=openai_api_key,
+                    callbacks=callbacks,
+                    **kwargs
+                )
+            )
+        
+        # Set up all strategies in parallel
+        await asyncio.gather(*setup_tasks)
+        
+        # Create custom chain components
+        self._prompt = ChatPromptTemplate.from_template(RAG_TEMPLATE)
+        self._llm = ChatOpenAI(
+            temperature=temperature,
+            model=model,
+            openai_api_key=openai_api_key,
             **kwargs
         )
-        
-    async def retrieve(
+        self._parser = StrOutputParser()
+
+    async def setup_with_strategies(
         self,
-        query: str,
+        initialized_strategies: List[BaseRetrievalStrategy],
+        vector_store: Any,
+        openai_api_key: str,
+        callbacks: Optional[List[AsyncCallbackHandler]] = None,
+        model: str = "gpt-4-1106-preview",
+        temperature: float = 0,
         **kwargs
-    ) -> List[Document]:
-        """Retrieve documents using weighted ensemble of strategies.
+    ) -> None:
+        """Set up ensemble with already-initialized strategies.
         
-        Args:
-            query: Search query
-            **kwargs: Additional retrieval parameters
-            
-        Returns:
-            Combined and deduplicated list of documents
+        This method is used when we already have initialized strategies
+        and want to avoid re-initializing them.
         """
+        # Use the already-initialized strategies
+        self._strategies = initialized_strategies
+        
+        # Create custom chain components
+        self._prompt = ChatPromptTemplate.from_template(RAG_TEMPLATE)
+        self._llm = ChatOpenAI(
+            temperature=temperature,
+            model=model,
+            openai_api_key=openai_api_key,
+            **kwargs
+        )
+        self._parser = StrOutputParser()
+
+    async def retrieve(self, query: str, **kwargs) -> List[Document]:
+        """Retrieve documents from all strategies in parallel and combine results."""
         self._validate_setup()
         
-        # Get results from all strategies
-        all_docs = {}  # Dict to track unique documents with scores
+        # Run all retrievers in parallel
+        retrieval_tasks = [
+            strategy._safe_retrieve(query)
+            for strategy in self._strategies
+        ]
         
-        # Retrieve from each strategy
-        for strategy, weight in zip(self._strategies, self.weights):
-            try:
-                docs = await strategy._safe_retrieve(query, **kwargs)
-                
-                # Add documents with weighted scores
-                for i, doc in enumerate(docs):
-                    score = (len(docs) - i) * weight  # Simple rank-based scoring
-                    if doc.page_content in all_docs:
-                        all_docs[doc.page_content]["score"] += score
-                    else:
-                        all_docs[doc.page_content] = {
-                            "doc": doc,
-                            "score": score
-                        }
-            except Exception as e:
-                # Log error but continue with other strategies
-                import logging
-                logging.error(f"Error in {strategy.name}: {str(e)}")
-                continue
-                
-        # Sort by combined scores and get top k
+        # Gather results
+        results = await asyncio.gather(*retrieval_tasks)
+        
+        # Combine and score documents
+        scored_docs: Dict[str, float] = {}  # doc_content -> score
+        
+        for strategy_idx, (docs, weight) in enumerate(zip(results, self.weights)):
+            # Score based on position and strategy weight
+            for doc_idx, doc in enumerate(docs):
+                score = (len(docs) - doc_idx) * weight
+                key = f"{doc.page_content}:{doc.metadata.get('document_id', '')}"
+                scored_docs[key] = scored_docs.get(key, 0) + score
+        
+        # Convert back to documents, sorted by score
+        unique_docs = {}
+        for doc_list in results:
+            for doc in doc_list:
+                key = f"{doc.page_content}:{doc.metadata.get('document_id', '')}"
+                if key not in unique_docs:
+                    unique_docs[key] = doc
+        
         sorted_docs = sorted(
-            all_docs.values(),
-            key=lambda x: x["score"],
+            unique_docs.values(),
+            key=lambda d: scored_docs[f"{d.page_content}:{d.metadata.get('document_id', '')}"],
             reverse=True
         )
         
-        return [doc["doc"] for doc in sorted_docs[:self.k]]
+        return sorted_docs[:self.k]
+
+    def _format_docs(self, docs: List[Document]) -> str:
+        """Format retrieved documents into a string."""
+        if not docs:
+            return ""
         
-    async def run(
-        self,
-        query: str,
-        **kwargs
-    ) -> Dict[str, Any]:
-        """Run the complete retrieval and answer generation chain.
+        formatted_docs = []
+        for doc in docs:
+            if hasattr(doc, 'page_content') and doc.page_content:
+                formatted_docs.append(doc.page_content)
         
-        Args:
-            query: User question
-            **kwargs: Additional parameters
-            
-        Returns:
-            Dictionary containing:
-            - answer: Generated response
-            - strategy: Name of the strategy
-            - sub_strategies: List of component strategies
-            - weights: Strategy weights used
+        return "\n\n".join(formatted_docs)
+
+    async def run(self, query: str, **kwargs) -> Dict[str, Any]:
+        """Run the complete ensemble retrieval and answer generation.
+        
+        This uses a custom chain implementation instead of LCEL.
         """
         self._validate_setup()
         
-        # Get response using RAG chain
-        result = await self._chain.ainvoke(query)
-        
-        return {
-            "answer": result,
-            "strategy": self.name,
-            "sub_strategies": self.strategy_names,
-            "weights": self.weights
-        }
-        
+        try:
+            # Step 1: Retrieve documents using ensemble
+            documents = await self.retrieve(query, **kwargs)
+            
+            # Step 2: Format documents
+            context = self._format_docs(documents)
+            
+            # Step 3: Create prompt with context and question
+            prompt_value = await self._prompt.ainvoke({
+                "context": context,
+                "question": query
+            })
+            
+            # Step 4: Generate response
+            llm_response = await self._llm.ainvoke(prompt_value)
+            
+            # Step 5: Parse output
+            answer = await self._parser.ainvoke(llm_response)
+            
+            return {
+                "answer": answer,
+                "strategy": self.name,
+                "sub_strategies": self.strategy_names,
+                "weights": self.weights,
+                "documents_retrieved": len(documents)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in ensemble run: {str(e)}")
+            return {
+                "answer": f"I encountered an error while processing your question: {str(e)}",
+                "strategy": self.name,
+                "sub_strategies": self.strategy_names,
+                "error": str(e)
+            }
+
+    # Keep these methods for backward compatibility but they won't be used in the custom chain
+    def get_relevant_documents(self, query: str, **kwargs) -> List[Document]:
+        """Synchronous version of retrieve for compatibility."""
+        try:
+            return asyncio.run(self.retrieve(query, **kwargs))
+        except Exception as e:
+            logger.error(f"Error in get_relevant_documents: {str(e)}")
+            return []
+
+    def invoke(self, input_data: str, **kwargs) -> List[Document]:
+        """Invoke method for compatibility."""
+        return self.get_relevant_documents(input_data, **kwargs)
+
+    async def ainvoke(self, input_data: str, **kwargs) -> List[Document]:
+        """Async invoke method for compatibility."""
+        return await self.retrieve(input_data, **kwargs)
+
     @property
     def name(self) -> str:
-        """Return strategy name."""
-        return "ensemble" 
+        """Return the strategy's name."""
+        return "ensemble_retrieval" 
+    
+    def _validate_setup(self) -> None:
+        """Validate that the strategy is properly initialized.
+        
+        Raises:
+            ValueError: If required components are not initialized
+        """
+        return
