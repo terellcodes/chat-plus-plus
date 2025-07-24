@@ -29,4 +29,6 @@ export const API_BASE_URL = getApiBaseUrl();
 
 export const API_ENDPOINTS = {
     HEALTH: `${API_BASE_URL}/health`,
+    UPLOAD: `${API_BASE_URL}/upload`,
+    CHAT: `${API_BASE_URL}/chat`,
 } as const; 

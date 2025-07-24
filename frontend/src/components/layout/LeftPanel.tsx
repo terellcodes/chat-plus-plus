@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { LeftPanelProps, RagStrategy, RagStrategyConfig } from '@/types';
 import RagStrategyCard from '@/components/shared/RagStrategyCard';
+import { documentService } from '@/services/document';
 
 // RAG Strategy configurations with power levels
 const RAG_STRATEGIES: RagStrategyConfig[] = [
@@ -73,18 +74,59 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
     onConfigurationChange({ enabledStrategies });
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      // Create mock PDF document for now
-      const mockPdf = {
-        id: Date.now().toString(),
-        filename: file.name,
-        size: file.size,
-        uploadedAt: new Date(),
-        processingStatus: 'ready' as const
-      };
-      onConfigurationChange({ selectedDocument: mockPdf });
+    if (!file || file.type !== 'application/pdf') {
+      onConfigurationChange({ 
+        uploadError: 'Please select a valid PDF file' 
+      });
+      return;
+    }
+
+    // if (file.size > 10 * 1024 * 1024) {
+    //   onConfigurationChange({ 
+    //     uploadError: 'File size must be less than 10MB' 
+    //   });
+    //   return;
+    // }
+
+    try {
+      // Clear any previous errors and set uploading state
+      onConfigurationChange({ 
+        uploadError: undefined,
+        isUploading: true,
+        selectedDocument: {
+          id: Date.now().toString(),
+          filename: file.name,
+          size: file.size,
+          uploadedAt: new Date(),
+          processingStatus: 'uploading'
+        }
+      });
+
+      // Upload the file
+      const response = await documentService.uploadPDF(file, configuration.openaiApiKey);
+
+      if (response.code === 200 && response.data) {
+        onConfigurationChange({
+          isUploading: false,
+          selectedDocument: {
+            id: response.data.document_id,
+            filename: response.data.filename,
+            size: file.size,
+            uploadedAt: new Date(response.data.upload_timestamp),
+            processingStatus: response.data.status as 'ready',
+          }
+        });
+      } else {
+        throw new Error(response.message || 'Failed to upload PDF');
+      }
+    } catch (error) {
+      onConfigurationChange({
+        isUploading: false,
+        uploadError: error instanceof Error ? error.message : 'Failed to upload PDF',
+        selectedDocument: undefined
+      });
     }
   };
 
@@ -145,12 +187,34 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
                 type="file"
                 accept=".pdf"
                 onChange={handleFileUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={!configuration.openaiApiKey || configuration.isUploading}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
               />
-              <div className="w-full px-3 py-8 border-2 border-dashed border-[#3e3e42] rounded text-center hover:border-[#007acc] transition-colors">
-                <div className="text-2xl mb-2">📄</div>
-                <p className="text-[#d4d4d4] text-lg">
-                  Click to upload PDF
+              <div className={`w-full px-3 py-8 border-2 border-dashed rounded text-center transition-colors ${
+                configuration.uploadError 
+                  ? 'border-[#f44747] bg-[#f447471a]'
+                  : configuration.isUploading
+                  ? 'border-[#007acc] bg-[#007acc1a]'
+                  : 'border-[#3e3e42] hover:border-[#007acc]'
+              }`}>
+                <div className="text-2xl mb-2">
+                  {configuration.isUploading ? '📤' : configuration.uploadError ? '❌' : '📄'}
+                </div>
+                <p className={`text-lg ${
+                  configuration.uploadError 
+                    ? 'text-[#f44747]'
+                    : configuration.isUploading
+                    ? 'text-[#007acc]'
+                    : 'text-[#d4d4d4]'
+                }`}>
+                  {configuration.isUploading 
+                    ? 'Uploading...' 
+                    : configuration.uploadError
+                    ? configuration.uploadError
+                    : !configuration.openaiApiKey
+                    ? 'Enter API Key to upload PDF'
+                    : 'Click to upload PDF'
+                  }
                 </p>
                 <p className="text-[#6a9955] text-base mt-1">
                   Max size: 10MB
@@ -158,18 +222,29 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
               </div>
             </div>
           ) : (
-            <div className="px-3 py-2 bg-[#1e1e1e] border border-[#4ec9b0] rounded">
+            <div className={`px-3 py-2 bg-[#1e1e1e] border rounded ${
+              configuration.selectedDocument.processingStatus === 'ready'
+                ? 'border-[#4ec9b0]'
+                : 'border-[#dcdcaa]'
+            }`}>
               <div className="flex items-center space-x-2">
-                <span className="text-[#4ec9b0]">📄</span>
+                <span className={configuration.selectedDocument.processingStatus === 'ready' ? 'text-[#4ec9b0]' : 'text-[#dcdcaa]'}>
+                  {configuration.selectedDocument.processingStatus === 'ready' ? '📄' : '⏳'}
+                </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-[#d4d4d4] text-lg truncate">
                     {configuration.selectedDocument.filename}
                   </p>
                   <p className="text-[#6a9955] text-base">
                     {(configuration.selectedDocument.size / 1024 / 1024).toFixed(1)} MB
+                    {configuration.selectedDocument.processingStatus !== 'ready' && ' • Processing...'}
                   </p>
                 </div>
-                <div className="w-2 h-2 bg-[#4ec9b0] rounded-full"></div>
+                <div className={`w-2 h-2 rounded-full ${
+                  configuration.selectedDocument.processingStatus === 'ready'
+                    ? 'bg-[#4ec9b0]'
+                    : 'bg-[#dcdcaa] animate-pulse'
+                }`}></div>
               </div>
             </div>
           )}

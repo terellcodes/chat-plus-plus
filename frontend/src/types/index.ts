@@ -32,6 +32,7 @@ export interface PdfDocument {
   uploadedAt: Date;
   pageCount?: number;
   processingStatus: 'uploading' | 'processing' | 'ready' | 'error';
+  error?: string;
 }
 
 // Chat types
@@ -56,6 +57,8 @@ export interface AppConfiguration {
   selectedDocument?: PdfDocument;
   enabledStrategies: RagStrategy[];
   isConfigured: boolean;
+  isUploading?: boolean;
+  uploadError?: string;
 }
 
 // Component Props types

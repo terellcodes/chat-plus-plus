@@ -1,8 +1,8 @@
 from typing import Optional, List
-import numpy as np
+import uuid
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
-from qdrant_client.http.models import Distance, VectorParams
+from qdrant_client.http.models import Distance, VectorParams, PointStruct
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import Qdrant
 
@@ -18,12 +18,19 @@ class VectorStore:
             cls._instance = super(VectorStore, cls).__new__(cls)
             # Initialize in-memory QDrant client
             cls._client = QdrantClient(":memory:")
-            # Create collection
+            
+            # Create collection with proper configuration
             cls._client.recreate_collection(
                 collection_name=cls._collection_name,
                 vectors_config=VectorParams(
-                    size=cls._dimension,
-                    distance=Distance.COSINE
+                    size=cls._dimension, 
+                    distance=Distance.COSINE,
+                ),
+                # Optionally configure HNSW index params
+                hnsw_config=models.HnswConfigDiff(
+                    m=16,  # Number of edges per node in the index graph
+                    ef_construct=100,  # Size of the dynamic candidate list
+                    full_scan_threshold=10000  # When to switch to full scan
                 )
             )
         return cls._instance
@@ -48,14 +55,18 @@ class VectorStore:
         embeddings: List[List[float]]
     ) -> List[str]:
         """Add texts with their embeddings to the vector store"""
-        # Generate random IDs for the points
-        ids = [str(np.random.randint(0, 1000000)) for _ in texts]
+        print(f"Adding {len(texts)} texts to vector store")
+        
+        # Generate proper UUIDs for the points
+        ids = [str(uuid.uuid4()) for _ in texts]
+        print(f"Generated {len(ids)} UUIDs")
         
         # Add points to the collection
+        print("Upserting points to collection...")
         self._client.upsert(
             collection_name=self._collection_name,
             points=[
-                models.PointStruct(
+                PointStruct(
                     id=id_,
                     payload={"text": text, **metadata},
                     vector=embedding
@@ -64,6 +75,7 @@ class VectorStore:
                 in zip(ids, texts, metadatas, embeddings)
             ]
         )
+        print("Successfully added points to vector store")
         
         return ids
 

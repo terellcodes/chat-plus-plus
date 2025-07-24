@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, UploadFile, File
+from fastapi import FastAPI, Depends, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
@@ -68,13 +68,13 @@ async def health_check():
 @app.post("/upload")
 async def upload_pdf(
     file: UploadFile = File(...),
-    openai_api_key: str = None
+    openai_api_key: str = Query(..., description="OpenAI API key")
 ):
     """Upload a PDF file and process it for RAG"""
     if not file.filename.endswith('.pdf'):
         print(f"Invalid file type: {file.filename}")
         return {
-            "status": ResponseMessage.ERROR,
+            "status": ResponseMessage.VALIDATION_ERROR,
             "code": StatusCode.HTTP_400_BAD_REQUEST,
             "message": "Only PDF files are supported"
         }
@@ -82,7 +82,7 @@ async def upload_pdf(
     if not openai_api_key:
         print("Missing OpenAI API key")
         return {
-            "status": ResponseMessage.ERROR,
+            "status": ResponseMessage.INTERNAL_ERROR,
             "code": StatusCode.HTTP_400_BAD_REQUEST,
             "message": "OpenAI API key is required"
         }
@@ -103,13 +103,12 @@ async def upload_pdf(
     except Exception as e:
         print(f"Error processing PDF file: {file.filename}. Error: {str(e)}")
         return {
-            "status": ResponseMessage.ERROR,
+            "status": ResponseMessage.INTERNAL_ERROR,
             "code": StatusCode.HTTP_500_INTERNAL_SERVER_ERROR,
             "message": str(e)
         }
 
 
-# @app.post("/chat", response_model=ChatResponse)
 @app.post("/chat")
 async def chat(request: ChatRequest):
     """Chat endpoint with RAG support"""
@@ -123,22 +122,17 @@ async def chat(request: ChatRequest):
         )
         print("Successfully processed chat request")
         return result
-        # return ChatResponse(
-        #     status=ResponseMessage.SUCCESS,
-        #     code=StatusCode.HTTP_200_OK,
-        #     data=ChatResponseData(**result)
-        # )
     except ValueError as e:
         print(f"Validation error in chat request: {str(e)}")
         return {
-            "status": ResponseMessage.ERROR,
+            "status": ResponseMessage.VALIDATION_ERROR,
             "code": StatusCode.HTTP_400_BAD_REQUEST,
             "message": str(e)
         }
     except Exception as e:
         print(f"Error processing chat request: {str(e)}")
         return {
-            "status": ResponseMessage.ERROR,
+            "status": ResponseMessage.INTERNAL_ERROR,
             "code": StatusCode.HTTP_500_INTERNAL_SERVER_ERROR,
             "message": str(e)
         }

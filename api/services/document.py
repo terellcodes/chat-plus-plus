@@ -40,7 +40,7 @@ class DocumentService:
         chunks = self.text_splitter.split_documents(pages)
         
         # Prepare texts and metadata
-        texts = [chunk.page_content for chunk in chunks]
+        documents = [chunk.page_content for chunk in chunks]
         metadatas = [
             DocumentMetadata(
                 source=filename,
@@ -50,18 +50,16 @@ class DocumentService:
             for chunk in chunks
         ]
         
-        # Create embeddings
-        embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
-        vectors = embeddings.embed_documents(texts)
-        
+        embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key, model="text-embedding-3-small")
+        vectors = embeddings.embed_documents(documents)
         # Store in vector store
         doc_id = str(uuid.uuid4())
-        vector_store.add_texts(texts, metadatas, vectors)
+        vector_store.add_texts(documents, metadatas, vectors)
         
         return UploadDocumentResponse(
             document_id=doc_id,
             filename=filename,
             total_chunks=len(chunks),
             upload_timestamp=datetime.utcnow(),
-            status="success"
+            status="ready"  # Changed from "success" to "ready"
         ) 
