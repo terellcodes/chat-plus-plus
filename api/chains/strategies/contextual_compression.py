@@ -12,6 +12,7 @@ from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
 from langchain_openai import ChatOpenAI
 import logging
+from pydantic import Field
 
 # Custom CrossEncoder implementation using sentence-transformers
 from langchain.retrievers.document_compressors.base import BaseDocumentCompressor
@@ -30,35 +31,25 @@ logger = logging.getLogger(__name__)
 class CustomCrossEncoderReranker(BaseDocumentCompressor):
     """Custom CrossEncoder reranker using sentence-transformers."""
     
+    # Declare fields explicitly with Pydantic Field
+    model: Any = Field(default=None, exclude=True)  # Exclude from serialization  
+    top_n: int = Field(default=5)
+    
+    class Config:
+        arbitrary_types_allowed = True  # Allow non-JSON serializable types
+        
     def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2", top_n: int = 5):
-        """Initialize the cross-encoder reranker.
+        # Initialize parent with declared fields first
+        super().__init__(model=None, top_n=top_n)
         
-        Args:
-            model_name: Name of the cross-encoder model from Hugging Face
-            top_n: Number of top documents to return
-        """
         if not HAS_CROSS_ENCODER:
-            raise ImportError("sentence-transformers is required. Install with: pip install sentence-transformers")
+            raise ImportError("sentence-transformers is required")
         
-        self._model_name = model_name
-        self._top_n = top_n
-        self._model = CrossEncoder(model_name)
+        # Now assign the actual CrossEncoder object
+        self.model = CrossEncoder(model_name)
         logger.info(f"Initialized CustomCrossEncoderReranker with model {model_name}")
     
-    @property
-    def model_name(self):
-        return self._model_name
-    
-    @property  
-    def top_n(self):
-        return self._top_n
-    
-    def compress_documents(
-        self,
-        documents: List[Document],
-        query: str,
-        callbacks = None,
-    ) -> List[Document]:
+    def compress_documents(self, documents: List[Document], query: str, callbacks=None) -> List[Document]:
         """Compress documents using cross-encoder reranking."""
         if not documents:
             return []
@@ -67,14 +58,15 @@ class CustomCrossEncoderReranker(BaseDocumentCompressor):
         pairs = [(query, doc.page_content) for doc in documents]
         
         # Get relevance scores
-        scores = self._model.predict(pairs)
+        scores = self.model.predict(pairs)
         
         # Sort documents by score (highest first)
         doc_scores = list(zip(documents, scores))
         doc_scores.sort(key=lambda x: x[1], reverse=True)
-        
+        print(f"Num docs to compress: {len(doc_scores)}")
+
         # Return top_n documents
-        return [doc for doc, score in doc_scores[:self._top_n]]
+        return [doc for doc, score in doc_scores[:self.top_n]]
     
     async def acompress_documents(
         self,
@@ -88,8 +80,9 @@ class CustomCrossEncoderReranker(BaseDocumentCompressor):
 class ContextualCompressionRetrieval(BaseRetrievalStrategy):
     """Contextual Compression retrieval strategy using Hugging Face CrossEncoder."""
     
-    def __init__(self, k: int = 5):
-        super().__init__(k=k)
+    def __init__(self, k1: int = 20, k2: int = 5):
+        super().__init__(k=k2)
+        self.k1 = k1
         
     async def setup(
         self,
@@ -101,7 +94,7 @@ class ContextualCompressionRetrieval(BaseRetrievalStrategy):
         """Initialize contextual compression with CrossEncoder reranking."""
         
         # Create base retriever
-        naive_retriever = vector_store.as_retriever(search_kwargs={"k": self.k})
+        naive_retriever = vector_store.as_retriever(search_kwargs={"k": self.k1})
         
         # Create CrossEncoder compressor with fallback
         if HAS_CROSS_ENCODER:
