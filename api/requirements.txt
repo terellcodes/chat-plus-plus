@@ -1,16 +1,28 @@
-fastapi==0.109.0
-uvicorn==0.27.0
-python-dotenv==1.0.0
-pydantic==2.5.3
+# Core dependencies
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+pydantic==2.6.1
 pydantic-settings==2.1.0
+python-dotenv==1.0.1
+sqlalchemy==2.0.27
+alembic==1.13.1
 mangum==0.17.0
 python-multipart==0.0.6
+
+# LangChain and related
 langchain==0.1.0
 langchain-openai==0.0.2
+langchain-community==0.0.19  # Earlier version to avoid conflicts
+langchain-core==0.1.21      # Version required by langchain-community
+openai==1.97.1
 pypdf==3.17.1
-qdrant-client==1.7.0
+qdrant-client==1.15.0
+langsmith>=0.0.77,<0.1.0    # Version required by langchain
+
+# Data processing
 numpy==1.24.3
-tiktoken==0.5.2 
+tiktoken==0.5.2
+regex>=2022.1.18
 
 # Development dependencies
 pytest==8.0.1
@@ -20,3 +32,15 @@ black==24.2.0  # Code formatting
 isort==5.13.2  # Import sorting
 flake8==7.0.0  # Linting
 mypy==1.8.0    # Type checking
+debugpy==1.8.15  # Debugging
+
+# HTTP and API
+requests==2.32.4
+aiohttp==3.12.14
+urllib3==2.5.0
+certifi>=2025.7.14
+
+# Utilities
+tenacity==8.5.0
+PyYAML==6.0.2
+typing-extensions>=4.8.0

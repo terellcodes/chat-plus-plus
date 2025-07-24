@@ -5,6 +5,8 @@ import MenuBar from './MenuBar';
 import LeftPanel from './LeftPanel';
 import MainPanel from './MainPanel';
 import { AppConfiguration, ChatSession, ChatMessage } from '@/types';
+import { chatService } from '@/services/chat';
+import { logger } from '@/utils/logger';
 
 /**
  * Main application layout component
@@ -40,37 +42,58 @@ export default function AppLayout() {
     setConfiguration({ ...newConfig, isConfigured });
   };
 
-  const handleSendMessage = (content: string) => {
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content,
-      timestamp: new Date()
-    };
-
-    // Add user message
-    setChatSession(prev => ({
-      ...prev,
-      messages: [...prev.messages, userMessage],
-      updatedAt: new Date()
-    }));
-
-    // TODO: Phase 3 - Send to API and handle streaming response
-    // For now, add a mock response
-    setTimeout(() => {
-      const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `Hello! I'm your AI assistant. How can I help you today?`,
+  const handleSendMessage = async (content: string) => {
+    try {
+      // Create and add user message
+      const userMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'user',
+        content,
         timestamp: new Date()
       };
 
+      // Add user message
       setChatSession(prev => ({
         ...prev,
-        messages: [...prev.messages, assistantMessage],
+        messages: [...prev.messages, userMessage],
         updatedAt: new Date()
       }));
-    }, 1000);
+
+      // Get response from API
+      const response = await chatService.sendMessage(
+        content,
+        configuration.openaiApiKey,
+        configuration.enabledStrategies || [],
+      );
+
+      // Add assistant message
+      setChatSession(prev => ({
+        ...prev,
+        messages: [...prev.messages, {
+          ...response,
+          id: Date.now().toString(),
+          timestamp: new Date()
+        }],
+        updatedAt: new Date()
+      }));
+
+    } catch (error) {
+      logger.error('Error sending message:', error);
+      // Add error message to chat
+      setChatSession(prev => ({
+        ...prev,
+        messages: [
+          ...prev.messages,
+          {
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: 'Sorry, there was an error processing your message. Please try again.',
+            timestamp: new Date()
+          }
+        ],
+        updatedAt: new Date()
+      }));
+    }
   };
 
   const handleClearChat = () => {

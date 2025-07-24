@@ -1,8 +1,42 @@
 from typing import List, Dict, Any
-from langchain.chat_models import ChatOpenAI
-from langchain.chains import ConversationalRetrievalChain
-from langchain.memory import ConversationBufferMemory
 from langchain.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from operator import itemgetter
+
+RAG_TEMPLATE = """\
+You are a helpful and kind assistant. Use the context provided below to answer the question.
+
+If you do not know the answer, or are unsure, say you don't know.
+
+Query:
+{question}
+
+Context:
+{context}
+"""
+
+def format_docs(docs):
+    """Format documents into a single string."""
+    print("docs", docs)
+    return "\n\n".join(doc.get("page_content", "") for doc in docs)
+
+def create_chain(retriever, rag_prompt, chat_model):
+    """Create a RAG chain that retrieves documents and generates a response."""
+    return (
+        # First get the retriever chain and format the documents
+        {
+            "context": itemgetter("question") | retriever | format_docs, 
+            "question": itemgetter("question")
+        }
+        # Then send to LLM
+        | rag_prompt 
+        | chat_model
+    )
+
+def format_docs(docs):
+    """Format documents into a single string."""
+    return "\n\n".join(doc.page_content for doc in docs)
 
 class NaiveRetrievalChain:
     """Chain for naive retrieval using LangChain's ConversationalRetrievalChain"""
@@ -20,50 +54,20 @@ class NaiveRetrievalChain:
             ),
             input_variables=["context", "question"]
         )
+
+        self.rag_prompt = ChatPromptTemplate.from_template(RAG_TEMPLATE)
+        self.chat_model = ChatOpenAI(model="gpt-4.1-nano", openai_api_key=openai_api_key)
         
-        self.llm = ChatOpenAI(
-            temperature=0,
-            model_name="gpt-3.5-turbo",
-            openai_api_key=openai_api_key
-        )
-        
-        self.memory = ConversationBufferMemory(
-            memory_key="chat_history",
-            return_messages=True
-        )
-        
-        self.chain = ConversationalRetrievalChain.from_llm(
-            llm=self.llm,
-            retriever=vector_store.as_retriever(search_kwargs={"k": 3}),
-            memory=self.memory,
-            combine_docs_chain_kwargs={"prompt": self.qa_template}
-        )
+        self.chain = create_chain(vector_store.as_retriever(search_kwargs={"k": 5}), self.rag_prompt, self.chat_model)
     
-    async def run(
-        self,
-        question: str,
-        chat_history: List[Dict[str, str]] = None
-    ) -> Dict[str, Any]:
+    async def run(self, question: str) -> Dict[str, Any]:
         """Run the chain on a question"""
-        # Convert chat history to the format expected by the chain
-        if chat_history:
-            for message in chat_history:
-                if message["role"] == "user":
-                    self.memory.chat_memory.add_user_message(message["content"])
-                else:
-                    self.memory.chat_memory.add_ai_message(message["content"])
-        
-        # Run the chain
-        result = await self.chain.acall({"question": question})
-        
-        # Extract source documents
-        source_docs = [
-            f"Page {doc.metadata['page']}: {doc.page_content[:200]}..."
-            for doc in result.get("source_documents", [])
-        ]
+        print("Running chain with question:", question)
+        result = await self.chain.ainvoke({"question": question})
+        print("Chain execution completed")
+
         
         return {
-            "answer": result["answer"],
-            "sources": source_docs,
+            "answer": result.content,  # ChatMessage object has content attribute
             "strategy": "naive_retrieval"
         } 

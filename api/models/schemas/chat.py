@@ -11,7 +11,6 @@ class ChatRequest(BaseModel):
     openai_api_key: str = Field(description="OpenAI API key")
     retrieval_strategies: List[str] = Field(description="List of RAG strategies to apply")
     message: str = Field(description="User's message/question")
-    chat_history: List[ChatMessage] = Field(default_factory=list, description="Previous chat messages")
 
 class ChatResponse(BaseModel):
     """Response model for chat endpoint"""
