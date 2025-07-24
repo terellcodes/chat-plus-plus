@@ -2,17 +2,17 @@
 
 from typing import Dict, Type
 from .base import BaseRetrievalStrategy
+from .bm25 import BM25Retrieval
 
 # Import strategies as they are implemented
 # from .naive import NaiveRetrieval
-# from .bm25 import BM25Retrieval
 # from .ensemble import EnsembleRetrieval
 
 # Registry of available strategies
 STRATEGY_REGISTRY: Dict[str, Type[BaseRetrievalStrategy]] = {
     # Will be populated as strategies are implemented
     # "naive_retrieval": NaiveRetrieval,
-    # "bm25": BM25Retrieval,
+    "bm25": BM25Retrieval,
     # "ensemble": EnsembleRetrieval,
 }
 
