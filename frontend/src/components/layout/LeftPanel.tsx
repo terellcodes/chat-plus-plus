@@ -144,7 +144,7 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
     <aside className="w-[15%] min-w-[280px] bg-[#252526] border-r border-[#3e3e42] flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-[#3e3e42]">
-        <h2 className="text-[#d4d4d4] font-semibold text-lg uppercase tracking-wide">
+        <h2 className="text-[#d4d4d4] font-semibold text-sm uppercase tracking-wide">
           Configuration
         </h2>
       </div>
@@ -154,7 +154,7 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
         
         {/* OpenAI API Key Section */}
         <div className="space-y-2">
-          <label className="block text-[#d4d4d4] text-lg font-medium">
+          <label className="block text-[#d4d4d4] text-sm font-medium">
             OpenAI API Key
           </label>
           {isEmpty ? (
@@ -164,19 +164,19 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
                 value={configuration.openaiApiKey || ''}
                 onChange={(e) => handleApiKeyChange(e.target.value)}
                 placeholder="sk-..."
-                className="w-full px-4 py-3 bg-[#1e1e1e] border border-[#3e3e42] rounded text-[#d4d4d4] text-lg focus:border-[#007acc] focus:outline-none"
+                className="w-full px-3 py-2 bg-[#1e1e1e] border border-[#3e3e42] rounded text-[#d4d4d4] text-sm focus:border-[#007acc] focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => setApiKeyVisible(!apiKeyVisible)}
-                className="text-[#007acc] text-base hover:underline"
+                className="text-[#007acc] text-xs hover:underline"
               >
                 {apiKeyVisible ? 'Hide' : 'Show'} Key
               </button>
             </div>
           ) : (
             <div className="flex items-center space-x-2">
-              <div className="flex-1 px-4 py-3 bg-[#1e1e1e] border border-[#4ec9b0] rounded text-[#4ec9b0] text-lg">
+              <div className="flex-1 px-3 py-2 bg-[#1e1e1e] border border-[#4ec9b0] rounded text-[#4ec9b0] text-sm">
                 ••••••••••••••••
               </div>
               <div className="w-2 h-2 bg-[#4ec9b0] rounded-full"></div>
@@ -186,7 +186,7 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
 
         {/* PDF Upload Section */}
         <div className="space-y-2">
-          <label className="block text-[#d4d4d4] text-lg font-medium">
+          <label className="block text-[#d4d4d4] text-sm font-medium">
             Upload PDF
           </label>
           {!configuration.selectedDocument ? (
@@ -208,7 +208,7 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
                 <div className="text-2xl mb-2">
                   {configuration.isUploading ? '📤' : configuration.uploadError ? '❌' : '📄'}
                 </div>
-                <p className={`text-lg ${
+                <p className={`text-sm ${
                   configuration.uploadError 
                     ? 'text-[#f44747]'
                     : configuration.isUploading
@@ -240,10 +240,10 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
                   {configuration.selectedDocument.processingStatus === 'ready' ? '📄' : '⏳'}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[#d4d4d4] text-lg truncate">
+                  <p className="text-[#d4d4d4] text-sm truncate">
                     {configuration.selectedDocument.filename}
                   </p>
-                  <p className="text-[#6a9955] text-base">
+                  <p className="text-[#6a9955] text-xs">
                     {(configuration.selectedDocument.size / 1024 / 1024).toFixed(1)} MB
                     {configuration.selectedDocument.processingStatus !== 'ready' && ' • Processing...'}
                   </p>
@@ -260,10 +260,10 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
 
         {/* RAG Strategies Section */}
         <div className="space-y-3">
-          <label className="block text-[#d4d4d4] text-lg font-medium">
+          <label className="block text-[#d4d4d4] text-sm font-medium">
             RAG Strategies
           </label>
-          <p className="text-[#6a9955] text-base">
+          <p className="text-[#6a9955] text-xs">
             Select strategies to power up your retrieval
           </p>
           
@@ -283,7 +283,7 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
             <div className="mt-4 p-3 bg-[#1e1e1e] border border-[#007acc] rounded">
               <div className="flex items-center space-x-2">
                 <span className="text-[#007acc]">⚡</span>
-                <span className="text-[#d4d4d4] text-lg">
+                <span className="text-[#d4d4d4] text-sm">
                   Power Level: {configuration.enabledStrategies.length}/5
                 </span>
               </div>

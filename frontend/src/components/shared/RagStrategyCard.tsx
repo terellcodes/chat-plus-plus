@@ -24,12 +24,12 @@ export default function RagStrategyCard({ strategy, isSelected, onToggle }: RagS
           {strategy.icon}
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className={`text-lg font-medium truncate ${
+          <h4 className={`text-sm font-medium truncate ${
             isSelected ? 'text-[#007acc]' : 'text-[#d4d4d4]'
           }`}>
             {strategy.name}
           </h4>
-          <p className="text-[#6a9955] text-base truncate">
+          <p className="text-[#6a9955] text-xs truncate">
             {strategy.description}
           </p>
         </div>

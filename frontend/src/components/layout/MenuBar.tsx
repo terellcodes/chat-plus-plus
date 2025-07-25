@@ -24,7 +24,7 @@ export default function MenuBar({ onSettingsClick }: MenuBarProps) {
               <span className="text-[#1e1e1e] text-xs font-bold">+</span>
             </div>
           </div>
-          <h1 className="text-[#d4d4d4] font-mono text-lg font-bold tracking-wider">
+          <h1 className="text-[#d4d4d4] font-mono text-sm font-bold tracking-wider">
             Chat<span className="text-[#007acc]">++</span>
           </h1>
         </div>
@@ -34,7 +34,7 @@ export default function MenuBar({ onSettingsClick }: MenuBarProps) {
       <nav className="flex items-center space-x-6">
         <a 
           href="/docs" 
-          className="text-[#d4d4d4] hover:text-[#007acc] transition-colors text-lg"
+          className="text-[#d4d4d4] hover:text-[#007acc] transition-colors text-sm"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -42,7 +42,7 @@ export default function MenuBar({ onSettingsClick }: MenuBarProps) {
         </a>
         <a 
           href="https://github.com/terellcodes/chat-plus-plus" 
-          className="text-[#d4d4d4] hover:text-[#007acc] transition-colors text-lg flex items-center space-x-1"
+          className="text-[#d4d4d4] hover:text-[#007acc] transition-colors text-sm flex items-center space-x-1"
           target="_blank"
           rel="noopener noreferrer"
         >

@@ -21,11 +21,11 @@ export default function ChatMessage({ message }: ChatMessageProps) {
           : 'bg-[#252526] text-[#d4d4d4] border border-[#3e3e42]'
       }`}>
         <div className="flex items-start space-x-2">
-          <div className="text-lg">
+          <div className="text-sm">
             {isUser ? '👤' : '🤖'}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-lg prose prose-invert max-w-none break-words">
+            <div className="text-sm prose prose-invert max-w-none break-words">
               <ReactMarkdown
                 components={{
                   // Style headings
@@ -61,7 +61,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                 {message.content}
               </ReactMarkdown>
             </div>
-            <p className={`text-base mt-1 ${
+            <p className={`text-xs mt-1 ${
               isUser ? 'text-blue-100' : 'text-[#6a9955]'
             }`}>
               {message.timestamp.toLocaleTimeString()}
