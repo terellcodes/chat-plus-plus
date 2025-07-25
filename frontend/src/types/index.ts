@@ -12,7 +12,8 @@ export enum RagStrategy {
   BM25_RETRIEVAL = 'bm25_retrieval',
   CONTEXTUAL_COMPRESSION_RETRIEVAL = 'contextual_compression_retrieval',
   MULTI_QUERY_RETRIEVAL = 'multi_query_retrieval',
-  PARENT_DOCUMENT_RETRIEVAL = 'parent_document_retrieval'
+  PARENT_DOCUMENT_RETRIEVAL = 'parent_document_retrieval',
+  RAG_FUSION_RETRIEVAL = 'rag_fusion_retrieval'
 }
 
 export interface RagStrategyConfig {

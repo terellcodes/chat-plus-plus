@@ -40,12 +40,20 @@ const RAG_STRATEGIES: RagStrategyConfig[] = [
     powerLevel: 4
   },
   {
+    id: RagStrategy.RAG_FUSION_RETRIEVAL,
+    name: 'RAG Fusion',
+    description: 'Multi-query with RRF ranking',
+    icon: '🚀',
+    enabled: false,
+    powerLevel: 5
+  },
+  {
     id: RagStrategy.PARENT_DOCUMENT_RETRIEVAL,
     name: 'Parent Document',
     description: 'Hierarchical retrieval',
     icon: '🌟',
     enabled: false,
-    powerLevel: 5
+    powerLevel: 6
   }
 ];
 
