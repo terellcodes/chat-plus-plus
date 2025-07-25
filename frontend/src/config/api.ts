@@ -22,7 +22,7 @@ const getApiBaseUrl = () => {
       return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     }
     // In production, use the deployed API URL
-    return 'https://api-spring-cloud-8971.fly.dev';
+    return 'api-ancient-glade-3016.fly.dev';
   };
 
 export const API_BASE_URL = getApiBaseUrl();
