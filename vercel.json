@@ -9,7 +9,6 @@
       }
     }
   ],
-  "functions": {},
   "routes": [
     { 
       "src": "/(.*)", 
