@@ -41,7 +41,7 @@ export default function MenuBar({ onSettingsClick }: MenuBarProps) {
           API Docs
         </a>
         <a 
-          href="https://github.com/your-username/chat-plus-plus" 
+          href="https://github.com/terellcodes/chat-plus-plus" 
           className="text-[#d4d4d4] hover:text-[#007acc] transition-colors text-lg flex items-center space-x-1"
           target="_blank"
           rel="noopener noreferrer"
