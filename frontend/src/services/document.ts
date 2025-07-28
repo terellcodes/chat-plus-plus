@@ -20,6 +20,19 @@ export interface UploadDocumentResponse {
   message?: string;
 }
 
+export interface SessionInfoResponse {
+  session_id: string;
+  created_at: number;
+  last_accessed: number;
+  loaded_strategies: string[];
+  document_metadata?: {
+    filename: string;
+    upload_timestamp: string;
+    total_pages: number;
+    total_chunks: number;
+  };
+}
+
 export class DocumentService {
   private static instance: DocumentService;
   private readonly baseUrl: string;
@@ -72,7 +85,7 @@ export class DocumentService {
     }
   }
 
-  async getSessionInfo(sessionId: string): Promise<any> {
+  async getSessionInfo(sessionId: string): Promise<SessionInfoResponse> {
     try {
       logger.info('Getting session info:', { sessionId });
 
