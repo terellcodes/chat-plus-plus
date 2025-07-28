@@ -108,7 +108,8 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
           filename: file.name,
           size: file.size,
           uploadedAt: new Date(),
-          processingStatus: 'uploading'
+          processingStatus: 'uploading',
+          sessionId: '' // Temporary placeholder, will be updated after upload
         }
       });
 
