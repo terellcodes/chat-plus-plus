@@ -64,6 +64,7 @@ export default function AppLayout() {
         content,
         configuration.openaiApiKey,
         configuration.enabledStrategies || [],
+        configuration.currentSessionId || '',
       );
 
       // Add assistant message

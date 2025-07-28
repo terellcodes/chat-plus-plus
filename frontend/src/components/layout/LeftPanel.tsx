@@ -112,18 +112,20 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
         }
       });
 
-      // Upload the file
-      const response = await documentService.uploadPDF(file, configuration.openaiApiKey);
+      // Upload the file (no API key needed for upload)
+      const response = await documentService.uploadPDF(file);
 
-      if (response.code === 200 && response.data) {
+      if (response.status === 'Success' && response.data) {
         onConfigurationChange({
           isUploading: false,
+          currentSessionId: response.data.session_id,
           selectedDocument: {
             id: response.data.document_id,
             filename: response.data.filename,
             size: file.size,
-            uploadedAt: new Date(response.data.upload_timestamp),
-            processingStatus: response.data.status as 'ready',
+            uploadedAt: new Date(response.data.metadata?.upload_timestamp || new Date().toISOString()),
+            processingStatus: 'ready',
+            sessionId: response.data.session_id
           }
         });
       } else {
@@ -195,7 +197,7 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
                 type="file"
                 accept=".pdf"
                 onChange={handleFileUpload}
-                disabled={!configuration.openaiApiKey || configuration.isUploading}
+                disabled={configuration.isUploading}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
               />
               <div className={`w-full px-3 py-8 border-2 border-dashed rounded text-center transition-colors ${
@@ -219,8 +221,6 @@ export default function LeftPanel({ configuration, onConfigurationChange }: Left
                     ? 'Uploading...' 
                     : configuration.uploadError
                     ? configuration.uploadError
-                    : !configuration.openaiApiKey
-                    ? 'Enter API Key to upload PDF'
                     : 'Click to upload PDF'
                   }
                 </p>
