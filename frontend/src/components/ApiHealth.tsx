@@ -1,57 +1,76 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { API_ENDPOINTS } from '@/config/api';
+import { useApiHealth } from '@/hooks/useApiHealth';
 
-interface HealthStatus {
-    status: string;
-    code: number;
-    message: string;
+interface ApiHealthProps {
+  compact?: boolean;
+  showRetryButton?: boolean;
 }
 
-export default function ApiHealth() {
-    const [health, setHealth] = useState<HealthStatus | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
+export default function ApiHealth({ compact = false, showRetryButton = false }: ApiHealthProps) {
+  const { health, isChecking, isOnline, isOffline, manualRetry } = useApiHealth();
 
-    useEffect(() => {
-        const checkHealth = async () => {
-            try {
-                const response = await fetch(API_ENDPOINTS.HEALTH);
-                const data = await response.json();
-                setHealth(data);
-                setError(null);
-            } catch (err) {
-                setError('Failed to connect to API');
-                setHealth(null);
-            } finally {
-                setLoading(false);
-            }
-        };
+  // Get appropriate styling based on status
+  const getStatusColor = () => {
+    if (isChecking) return '#dcdcaa'; // Yellow for checking
+    if (isOnline) return '#4ec9b0'; // Green for online
+    return '#f44747'; // Red for offline/error
+  };
 
-        checkHealth();
-    }, []);
+  const getStatusIcon = () => {
+    if (isChecking) return '🟡';
+    if (isOnline) return '🟢';
+    return '🔴';
+  };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="animate-pulse">Checking API status...</div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg">
-                {error}
-            </div>
-        );
-    }
-
+  if (compact) {
+    // Compact version for header display
     return (
-        <div className={`p-4 ${health?.status === 'Success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'} rounded-lg`}>
-            <p className="font-medium">API Status: {health?.status}</p>
-            <p className="text-sm mt-1">{health?.message}</p>
-        </div>
+      <div className="flex items-center space-x-2">
+        <div 
+          className="w-2 h-2 rounded-full"
+          style={{ backgroundColor: getStatusColor() }}
+        />
+        <span className="text-[#d4d4d4] text-sm">
+          {health.message}
+        </span>
+        {showRetryButton && isOffline && (
+          <button
+            onClick={manualRetry}
+            className="text-[#007acc] hover:text-[#4ec9b0] text-xs transition-colors ml-2"
+          >
+            Retry
+          </button>
+        )}
+      </div>
     );
+  }
+
+  // Full version for standalone display
+  return (
+    <div className="flex items-center justify-between p-3 bg-[#2d2d30] border border-[#3e3e42] rounded">
+      <div className="flex items-center space-x-3">
+        <span className="text-lg">{getStatusIcon()}</span>
+        <div>
+          <p className="text-[#d4d4d4] text-sm font-medium">
+            {health.message}
+          </p>
+          {health.lastChecked && (
+            <p className="text-[#6a9955] text-xs">
+              Last checked: {health.lastChecked.toLocaleTimeString()}
+            </p>
+          )}
+        </div>
+      </div>
+      
+      {showRetryButton && isOffline && (
+        <button
+          onClick={manualRetry}
+          className="px-3 py-1 bg-[#007acc] hover:bg-[#4ec9b0] text-white text-xs rounded transition-colors"
+        >
+          Retry Connection
+        </button>
+      )}
+    </div>
+  );
 } 

@@ -105,6 +105,15 @@ export interface ApiError {
   details?: string;
 }
 
+// API Health types
+export type HealthStatus = 'checking' | 'online' | 'offline' | 'error';
+
+export interface HealthCheckResult {
+  status: HealthStatus;
+  message: string;
+  lastChecked?: Date;
+}
+
 // Utility types
 export type ConfigurationStep = 'api_key' | 'pdf_upload' | 'rag_strategies';
 
