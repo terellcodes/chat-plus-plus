@@ -31,4 +31,6 @@ export const API_ENDPOINTS = {
     HEALTH: `${API_BASE_URL}/health`,
     UPLOAD: `${API_BASE_URL}/upload`,
     CHAT: `${API_BASE_URL}/chat`,
+    STRATEGIES: `${API_BASE_URL}/strategies`,
+    SESSION: (sessionId: string) => `${API_BASE_URL}/session/${sessionId}`,
 } as const; 

@@ -34,6 +34,7 @@ export interface PdfDocument {
   pageCount?: number;
   processingStatus: 'uploading' | 'processing' | 'ready' | 'error';
   error?: string;
+  sessionId: string; // Session ID for this document
 }
 
 // Chat types
@@ -51,6 +52,18 @@ export interface ChatSession {
   updatedAt: Date;
 }
 
+// Session types
+export interface SessionInfo {
+  session_id: string;
+  created_at: number;
+  last_accessed: number;
+  loaded_strategies: string[];
+  document_metadata?: {
+    filename: string;
+    upload_timestamp: string;
+  };
+}
+
 // Configuration types
 export interface AppConfiguration {
   openaiApiKey: string;
@@ -59,6 +72,7 @@ export interface AppConfiguration {
   isConfigured: boolean;
   isUploading?: boolean;
   uploadError?: string;
+  currentSessionId?: string; // Current session for the uploaded document
 }
 
 // Component Props types
