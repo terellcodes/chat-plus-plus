@@ -6,9 +6,16 @@ export interface UploadDocumentResponse {
   data?: {
     document_id: string;
     filename: string;
+    total_pages: number;
     total_chunks: number;
-    upload_timestamp: string;
-    status: string;
+    message: string;
+    session_id: string;
+    metadata?: {
+      filename: string;
+      upload_timestamp: string;
+      total_pages: number;
+      total_chunks: number;
+    };
   };
   message?: string;
 }
@@ -28,14 +35,20 @@ export class DocumentService {
     return DocumentService.instance;
   }
 
-  async uploadPDF(file: File, openaiApiKey: string): Promise<UploadDocumentResponse> {
+  async uploadPDF(file: File, sessionId?: string): Promise<UploadDocumentResponse> {
     try {
       const formData = new FormData();
       formData.append('file', file);
 
-      logger.info('Uploading PDF:', { filename: file.name, size: file.size });
+      logger.info('Uploading PDF:', { filename: file.name, size: file.size, sessionId });
 
-      const response = await fetch(`${this.baseUrl}/upload?openai_api_key=${encodeURIComponent(openaiApiKey)}`, {
+      // Build URL with optional session_id parameter
+      const url = new URL(`${this.baseUrl}/upload`);
+      if (sessionId) {
+        url.searchParams.set('session_id', sessionId);
+      }
+
+      const response = await fetch(url.toString(), {
         method: 'POST',
         body: formData,
         credentials: 'include',
@@ -55,6 +68,32 @@ export class DocumentService {
       return data;
     } catch (error) {
       logger.warn('Error uploading PDF:', error);
+      throw error;
+    }
+  }
+
+  async getSessionInfo(sessionId: string): Promise<any> {
+    try {
+      logger.info('Getting session info:', { sessionId });
+
+      const response = await fetch(`${this.baseUrl}/session/${sessionId}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        logger.warn('Failed to get session info:', data);
+        throw new Error(data.message || 'Failed to get session info');
+      }
+
+      logger.success('Session info retrieved:', data);
+      return data;
+    } catch (error) {
+      logger.warn('Error getting session info:', error);
       throw error;
     }
   }
