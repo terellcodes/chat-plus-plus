@@ -98,6 +98,7 @@ class ContextualCompressionRetrieval(BaseRetrievalStrategy):
         vector_store: VectorStore,
         openai_api_key: str,
         callbacks: Optional[List[AsyncCallbackHandler]] = None,
+        document: Optional[Document] = None,
         **kwargs
     ) -> None:
         """Initialize contextual compression with CrossEncoder reranking."""

@@ -1,183 +1,144 @@
-"""BM25 retrieval strategy implementation using LangChain's BM25Retriever."""
+"""BM25 retrieval strategy using LangChain's BM25Retriever."""
 
 from typing import List, Dict, Any, Optional
-import io
-import logging
-from pypdf import PdfReader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_core.documents import Document
-from langchain_core.callbacks import AsyncCallbackHandler
+try:
+    from langchain_core.documents import Document
+except ImportError:
+    # Fallback for older versions
+    from langchain.schema import Document
+
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
 from langchain_community.retrievers import BM25Retriever as LangChainBM25Retriever
+from langchain_core.runnables import RunnablePassthrough
+from operator import itemgetter
 
+from chains.retrieval import RAG_TEMPLATE
 from .base import BaseRetrievalStrategy
-from .utils import create_rag_chain
-from core.document_store import document_store
 
-logger = logging.getLogger(__name__)
 
 class BM25Retrieval(BaseRetrievalStrategy):
-    """BM25 retrieval strategy using LangChain's implementation.
+    """
+    BM25 retrieval strategy using LangChain's BM25Retriever.
     
-    This strategy uses the Best-Matching 25 algorithm for document retrieval,
-    which is based on a probabilistic model and uses term frequency and
-    document frequency to rank documents.
+    This implementation follows the pattern from Advanced_Retrieval_with_LangChain_Assignment.ipynb:
+    1. Uses BM25Retriever.from_documents() directly on full document content
+    2. No pre-chunking - BM25 works on the complete document text
+    3. Integrates with session-based architecture to get full document from cache
     """
     
-    def __init__(
-        self,
-        k: int = 5,
-        chunk_size: int = 500,  # Smaller chunks for BM25
-        chunk_overlap: int = 50
-    ):
-        """Initialize BM25 retrieval.
+    def __init__(self, k: int = 5):
+        """Initialize BM25 retrieval strategy.
         
         Args:
             k: Number of documents to retrieve
-            chunk_size: Size of text chunks for BM25
-            chunk_overlap: Overlap between chunks
         """
-        super().__init__(k=k)
-        self.chunk_size = chunk_size
-        self.chunk_overlap = chunk_overlap
-        self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap
-        )
-        logger.info(f"🏗️ Initializing {self.name} with k={k}, chunk_size={chunk_size}, chunk_overlap={chunk_overlap}")
-        
+        self.k = k
+        self._retriever = None
+        self._chain = None
+        print(f"🏗️  Initializing BM25 retrieval with k={k}")
+    
     async def setup(
         self,
         vector_store: Any,
         openai_api_key: str,
-        callbacks: Optional[List[AsyncCallbackHandler]] = None,
+        document: Optional[Document] = None,
         **kwargs
     ) -> None:
-        """Initialize BM25 with custom document chunking.
+        """Set up BM25 retrieval strategy.
         
         Args:
-            vector_store: Not used by BM25, but required by interface
-            openai_api_key: OpenAI API key for response generation
-            callbacks: Optional callbacks for monitoring
-            **kwargs: Additional setup parameters
+            vector_store: Not used by BM25 (for interface compatibility)
+            openai_api_key: OpenAI API key for chat model
+            document: Full document from session cache (preferred approach)
+            **kwargs: Additional parameters
         """
-        # Get all stored documents
-        stored_files = document_store.list_documents()
-        if not stored_files:
-            raise ValueError("No documents found for BM25 indexing")
-            
-        logger.info(f"🔧 {self.name} setup: Processing {len(stored_files)} documents for BM25 indexing")
-            
-        # Process each document with BM25-specific chunking
-        documents = []
-        for file_id, metadata in stored_files.items():
-            # Get PDF content
-            pdf_content = document_store.get_document(file_id)
-            if not pdf_content:
-                continue
-                
-            # Read PDF content
-            pdf_file = io.BytesIO(pdf_content)
-            pdf = PdfReader(pdf_file)
-            
-            # Extract text from each page
-            pages = []
-            for i, page in enumerate(pdf.pages):
-                text = page.extract_text()
-                if text.strip():  # Skip empty pages
-                    pages.append(
-                        Document(
-                            page_content=text,
-                            metadata={
-                                "document_id": file_id,
-                                "source": metadata.get("filename", "unknown"),
-                                "page": i + 1,
-                                "total_pages": len(pdf.pages)
-                            }
-                        )
-                    )
-            
-            # Split pages into chunks
-            if pages:
-                doc = self.text_splitter.split_documents(pages)
-                documents.extend(doc)
+        print(f"🔧 Setting up BM25 retrieval strategy")
         
+        # Get document content - prefer session-based full document
+        if document:
+            print(f"📚 Using full document from session cache ({len(document.page_content)} characters)")
+            
+            # Create a list with the single document for BM25Retriever.from_documents()
+            # BM25 works best when it can see the full document context
+            documents = [document]
+            
         if not documents:
-            raise ValueError("No valid chunks found for BM25 indexing")
+            raise ValueError("No documents available for BM25 setup")
         
-        logger.info(f"📊 {self.name} setup: Created {len(documents)} chunks for BM25 indexing")
-        
-        # Initialize BM25 retriever
+        # Create BM25 retriever using LangChain's implementation
+        # This follows the exact pattern from the notebook: BM25Retriever.from_documents()
+        print(f"🔍 Creating BM25Retriever from {len(documents)} documents")
         self._retriever = LangChainBM25Retriever.from_documents(
             documents,
             k=self.k
         )
         
-        logger.info(f"🔍 {self.name} setup: BM25 retriever initialized with k={self.k}")
+        print(f"✅ BM25 retriever initialized with k={self.k}")
         
-        # Setup RAG chain
-        self._chain = create_rag_chain(
-            self._retriever,
-            openai_api_key,
-            callbacks=callbacks,
-            **kwargs
+        # Set up RAG chain using the same pattern as the notebook
+        rag_prompt = ChatPromptTemplate.from_template(RAG_TEMPLATE)
+        chat_model = ChatOpenAI(model="gpt-4o-mini", openai_api_key=openai_api_key)
+        
+        self._chain = (
+            {"context": itemgetter("question") | self._retriever, "question": itemgetter("question")}
+            | RunnablePassthrough.assign(context=itemgetter("context"))
+            | {"response": rag_prompt | chat_model, "context": itemgetter("context")}
         )
         
-        logger.info(f"🎯 {self.name} setup completed successfully! Ready to process queries.")
-        
-    async def retrieve(
-        self,
-        query: str,
-        **kwargs
-    ) -> List[Document]:
+        print("✅ BM25 strategy setup complete")
+    
+    async def retrieve(self, query: str, **kwargs) -> List[Document]:
         """Retrieve documents using BM25 scoring.
         
         Args:
             query: Search query
-            **kwargs: Additional retrieval parameters
-            
-        Returns:
-            List of retrieved documents
-        """
-        self._validate_setup()
-        logger.info(f"🔍 Running {self.name} retriever for query: '{query[:100]}{'...' if len(query) > 100 else ''}'")
-        documents = self._retriever.get_relevant_documents(query)
-        logger.info(f"📄 {self.name} returned {len(documents)} documents using BM25 scoring")
-        return documents
-        
-    async def run(
-        self,
-        query: str,
-        **kwargs
-    ) -> Dict[str, Any]:
-        """Run the complete retrieval and answer generation chain.
-        
-        Args:
-            query: User question
             **kwargs: Additional parameters
             
         Returns:
-            Dictionary containing:
-            - answer: Generated response
-            - strategy: Name of the strategy
+            List of relevant documents ranked by BM25 score
         """
-        self._validate_setup()
+        if not self._retriever:
+            raise ValueError("BM25 strategy not properly initialized")
         
-        logger.info(f"🚀 Starting {self.name} chain execution for query: '{query[:100]}{'...' if len(query) > 100 else ''}'")
+        print(f"🔍 BM25 retrieving documents for: '{query}'")
         
-        # Get response using RAG chain with proper input format
-        result = await self._chain.ainvoke({"question": query})
+        # Use LangChain BM25Retriever's get_relevant_documents method
+        documents = self._retriever.get_relevant_documents(query)
         
-        logger.info(f"✅ {self.name} completed successfully")
+        print(f"📄 BM25 retrieved {len(documents)} documents")
+        
+        return documents
+    
+    async def run(self, query: str, **kwargs) -> Dict[str, Any]:
+        """Run the complete BM25 retrieval chain.
+        
+        Args:
+            query: User's question
+            **kwargs: Additional parameters
+            
+        Returns:
+            Dictionary containing the answer and metadata
+        """
+        if not self._chain:
+            raise ValueError("BM25 chain not initialized")
+        
+        print(f"🚀 Running BM25 chain for query: '{query}'")
+        
+        # Invoke the chain exactly like in the notebook
+        result = self._chain.invoke({"question": query})
         
         return {
-            "answer": result,
-            "strategy": self.name
+            "answer": result["response"].content,
+            "strategy": self.name,
+            "retrieval_method": "BM25 with LangChain BM25Retriever",
+            "context": result["context"]
         }
-        
+    
     def get_relevant_documents(self, query: str) -> List[Document]:
-        """Get relevant documents for a query.
+        """Get relevant documents for a query (synchronous interface).
         
-        This method is required by the LangChain retriever interface.
+        This method is required for LangChain retriever interface compatibility.
         
         Args:
             query: Search query
@@ -185,9 +146,12 @@ class BM25Retrieval(BaseRetrievalStrategy):
         Returns:
             List of relevant documents
         """
-        return self._retriever.get_relevant_documents(query)
+        if not self._retriever:
+            raise ValueError("BM25 strategy not properly initialized")
         
+        return self._retriever.get_relevant_documents(query)
+    
     @property
     def name(self) -> str:
-        """Return strategy name."""
-        return "bm25" 
+        """Strategy name identifier."""
+        return "bm25_retrieval"

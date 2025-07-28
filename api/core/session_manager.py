@@ -150,6 +150,7 @@ class SessionManager:
         await strategy.setup(
             vector_store=vector_store,
             openai_api_key=openai_api_key,
+            document=document,
             **kwargs
         )
         

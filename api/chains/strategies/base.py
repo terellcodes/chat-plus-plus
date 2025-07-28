@@ -31,6 +31,7 @@ class BaseRetrievalStrategy(ABC):
         vector_store: Any,
         openai_api_key: str,
         callbacks: Optional[List[AsyncCallbackHandler]] = None,
+        document: Optional[Document] = None,
         **kwargs
     ) -> None:
         """Initialize the strategy with necessary components.

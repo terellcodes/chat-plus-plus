@@ -59,6 +59,7 @@ class RAGFusionRetrieval(BaseRetrievalStrategy):
         callbacks: Optional[List[AsyncCallbackHandler]] = None,
         model: str = "gpt-3.5-turbo",
         temperature: float = 0,
+        document: Optional[Document] = None,
         **kwargs
     ):
         """Setup RAG Fusion chain components."""
