@@ -644,10 +644,10 @@ class RetrievalService:
         # If only one strategy, use it directly
         if len(retrieval_strategies) == 1:
             return await self.strategies[retrieval_strategies[0]].run(message, **kwargs)
-            
+        
         # For multiple strategies, use ensemble strategy
         ensemble = EnsembleRetrieval(
-            strategies=retrieval_strategies,
+            retrieval_strategies,
             weights=weights,
             k=kwargs.get('k', 5)
         )
