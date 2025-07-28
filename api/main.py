@@ -78,9 +78,9 @@ async def health_check():
 @app.post("/upload")
 async def upload_pdf(
     file: UploadFile = File(...),
-    openai_api_key: str = Query(..., description="OpenAI API key")
+    session_id: str = Query(None, description="Optional session ID")
 ):
-    """Upload a PDF file and process it for RAG"""
+    """Upload a PDF file and cache it for lazy retriever creation"""
     if not file.filename.endswith('.pdf'):
         print(f"Invalid file type: {file.filename}")
         return {
@@ -89,20 +89,12 @@ async def upload_pdf(
             "message": "Only PDF files are supported"
         }
     
-    if not openai_api_key:
-        print("Missing OpenAI API key")
-        return {
-            "status": ResponseMessage.INTERNAL_ERROR,
-            "code": StatusCode.HTTP_400_BAD_REQUEST,
-            "message": "OpenAI API key is required"
-        }
-    
     try:
         print(f"Processing PDF file: {file.filename}")
         result = await document_service.process_pdf(
             file.file,
             file.filename,
-            openai_api_key
+            session_id
         )
         print(f"Successfully processed PDF file: {file.filename}")
         return {
@@ -121,16 +113,21 @@ async def upload_pdf(
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    """Chat endpoint with RAG support"""
+    """Chat endpoint with session-based RAG support and lazy retriever loading"""
     try:
-        print(f"Processing chat request with message: {request.message}")
+        print(f"Processing chat request for session {request.session_id} with message: {request.message}")
         result = await retrieval_service.get_response(
             request.openai_api_key,
             request.message,
             request.retrieval_strategies,
+            request.session_id
         )
         print("Successfully processed chat request")
-        return result
+        return {
+            "status": ResponseMessage.SUCCESS,
+            "code": StatusCode.HTTP_200_OK,
+            "data": result
+        }
     except ValueError as e:
         print(f"Validation error in chat request: {str(e)}")
         return {
@@ -146,6 +143,39 @@ async def chat(request: ChatRequest):
             "message": str(e)
         }
 
+
+@app.get("/session/{session_id}")
+async def get_session_info(session_id: str):
+    """Get information about a session"""
+    try:
+        result = await retrieval_service.get_session_info(session_id)
+        return {
+            "status": ResponseMessage.SUCCESS,
+            "code": StatusCode.HTTP_200_OK,
+            "data": result
+        }
+    except ValueError as e:
+        return {
+            "status": ResponseMessage.VALIDATION_ERROR,
+            "code": StatusCode.HTTP_400_BAD_REQUEST,
+            "message": str(e)
+        }
+    except Exception as e:
+        return {
+            "status": ResponseMessage.INTERNAL_ERROR,
+            "code": StatusCode.HTTP_500_INTERNAL_SERVER_ERROR,
+            "message": str(e)
+        }
+
+@app.get("/strategies")
+async def list_strategies():
+    """Get list of available retrieval strategies"""
+    strategies = await retrieval_service.list_available_strategies()
+    return {
+        "status": ResponseMessage.SUCCESS,
+        "code": StatusCode.HTTP_200_OK,
+        "data": {"strategies": strategies}
+    }
 
 # Handler for Vercel serverless
 handler = Mangum(app)
