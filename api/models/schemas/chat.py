@@ -22,6 +22,7 @@ class ChatRequest(BaseModel):
         description="List of RAG strategies to apply. Can be simple strategy names or detailed configs"
     )
     message: str = Field(description="User's message/question")
+    session_id: str = Field(description="Session ID from document upload")
 
 class StrategyResult(BaseModel):
     """Result information for a retrieval strategy"""
