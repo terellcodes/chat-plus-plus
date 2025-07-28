@@ -19,6 +19,8 @@ class Settings(BaseSettings):
         "http://localhost:3001",  # Additional local frontend port
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
+        "http://127.0.0.0:3000",
+        "http://127.0.0.0:3001",
         "https://*.vercel.app",   # Vercel preview deployments
         "https://chat-plus-plus.vercel.app"  # Production frontend
     ]
