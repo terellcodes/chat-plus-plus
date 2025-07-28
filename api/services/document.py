@@ -1,166 +1,121 @@
 import uuid
-import io
+import tempfile
+import os
 from datetime import datetime
 from typing import BinaryIO, Optional, List
-from pypdf import PdfReader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
+from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.documents import Document
 
-from core.vector_store import vector_store
-from core.document_store import document_store
-from models.schemas.document import UploadDocumentResponse, DocumentMetadata
+from core.text_cache import text_cache
+from core.session_manager import session_manager
+from models.schemas.document import UploadDocumentResponse, UploadDocumentMetadata
 
 class DocumentService:
-    """Service for handling document operations"""
+    """Service for handling document operations with session-based text caching"""
 
     def __init__(self):
-        self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200
-        )
+        pass  # No longer need text splitter - strategies handle their own chunking
 
     async def process_pdf(
         self,
         file: BinaryIO,
         filename: str,
-        openai_api_key: str,
-        strategy_names: Optional[List[str]] = None,
-        **kwargs
+        session_id: Optional[str] = None
     ) -> UploadDocumentResponse:
-        """Process a PDF file and store it in the vector store
+        """Process a PDF file using LangChain PyPDFLoader and cache text for lazy retriever creation.
         
         Args:
             file: PDF file object
             filename: Original filename
-            openai_api_key: OpenAI API key
-            strategy_names: Optional list of strategies to initialize
-            **kwargs: Additional strategy parameters
+            session_id: Optional session ID, will create new session if not provided
+            
+        Returns:
+            Response with session_id and document metadata
         """
         print(f"\n📄 Processing PDF file: {filename}")
         
+        # Create session if not provided
+        if not session_id:
+            session_id = session_manager.create_session()
+            print(f"🆔 Created new session: {session_id}")
+        
+        # Create temporary file for PyPDFLoader (it needs a file path)
+        temp_path = None
         try:
-            # Generate unique ID for the document
-            doc_id = str(uuid.uuid4())
+            # Write uploaded file to temporary location
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                tmp_file.write(file.read())
+                temp_path = tmp_file.name
             
-            # Read and store PDF content
-            print("💾 Storing PDF content...")
-            file_content = file.read()
-            document_store.add_document(
-                doc_id,
-                file_content,
+            print("📚 Loading PDF with LangChain PyPDFLoader...")
+            
+            # Use LangChain's optimized PDF loader
+            loader = PyPDFLoader(
+                file_path=temp_path,
+            )
+            
+            # Load document - this is much faster than manual parsing
+            documents = loader.load()
+            
+            if not documents:
+                raise ValueError("No content extracted from PDF")
+                
+            # Get the single document (in "single" mode)
+            document = documents[0]
+            
+            # Update metadata with our information
+            document.metadata.update({
+                "source": filename,
+                "document_id": str(uuid.uuid4()),
+                "upload_timestamp": datetime.utcnow().isoformat(),
+                "session_id": session_id
+            })
+            
+            print(f"✅ PDF loaded successfully. Content length: {len(document.page_content)} characters")
+            
+            # Cache the document text for lazy retriever creation
+            doc_id = text_cache.add_document(
+                session_id=session_id,
+                document=document,
                 metadata={
                     "filename": filename,
                     "upload_timestamp": datetime.utcnow().isoformat()
                 }
             )
-            print("✅ PDF content stored")
-
-            # Create in-memory file and read PDF
-            print("📚 Loading PDF content...")
-            pdf_file = io.BytesIO(file_content)
-            pdf = PdfReader(pdf_file)
             
-            # Extract text from each page
-            pages = []
-            for i, page in enumerate(pdf.pages):
-                text = page.extract_text()
-                if text.strip():  # Skip empty pages
-                    pages.append(
-                        Document(
-                            page_content=text,
-                            metadata={
-                                "source": filename,
-                                "page": i + 1,
-                                "total_pages": len(pdf.pages),
-                                "document_id": doc_id
-                            }
-                        )
-                    )
+            print(f"💾 Document cached in session {session_id}")
             
-            # Get total pages
-            total_pages = len(pdf.pages)
-            print(f"📋 PDF loaded successfully. Total pages: {total_pages}")
-            
-            # Split into chunks
-            print("✂️  Splitting document into chunks...")
-            chunks = self.text_splitter.split_documents(pages)
-            print(f"📝 Document split into {len(chunks)} chunks")
-            
-            # Verify chunks have content
-            if not chunks:
-                print("❌ Error: No content extracted from PDF")
-                document_store.delete_document(doc_id)
-                raise ValueError("No content extracted from PDF")
-            
-            # Prepare texts and metadata
-            documents = []
-            metadatas = []
-            skipped_chunks = 0
-            
-            print("🔍 Processing document chunks...")
-            for i, chunk in enumerate(chunks, 1):
-                if not chunk.page_content or not isinstance(chunk.page_content, str):
-                    skipped_chunks += 1
-                    print(f"⚠️  Skipping invalid chunk {i}")
-                    continue
-                    
-                documents.append(chunk.page_content)
-                metadatas.append(
-                    DocumentMetadata(
-                        source=filename,
-                        page=chunk.metadata.get("page", 1),
-                        total_pages=total_pages,
-                        document_id=doc_id
-                    ).dict()
-                )
-            
-            if skipped_chunks:
-                print(f"⚠️  Skipped {skipped_chunks} invalid chunks")
-                
-            if not documents:
-                print("❌ Error: No valid content chunks found in PDF")
-                document_store.delete_document(doc_id)
-                raise ValueError("No valid content chunks found in PDF")
-            
-            # Create embeddings
-            print("🧮 Generating embeddings...")
-            embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key, model="text-embedding-3-small")
-            vectors = embeddings.embed_documents(documents)
-            print(f"✨ Generated {len(vectors)} embeddings")
-            
-            # Store in vector store
-            print(f"💽 Storing documents in vector store...")
-            vector_store.add_texts(documents, metadatas, vectors)
-            
-            # Initialize requested strategies if provided
-            if strategy_names:
-                print(f"🔄 Initializing requested strategies: {strategy_names}")
-                from services.retrieval import RetrievalService
-                retrieval_service = RetrievalService()
-                await retrieval_service.initialize_strategies(
-                    strategy_names,
-                    openai_api_key,
-                    **kwargs
-                )
-            
-            print(f"✅ Successfully processed PDF. Total valid chunks: {len(documents)}")
+            # Return response with session info - no vector store operations yet!
             return UploadDocumentResponse(
                 document_id=doc_id,
                 filename=filename,
-                total_chunks=len(documents),
-                upload_timestamp=datetime.utcnow(),
-                status="ready"
+                total_pages=1,  # Single document mode
+                total_chunks=0,  # Chunks created lazily when strategies are used
+                message=f"PDF processed and cached successfully. Session: {session_id}",
+                session_id=session_id,  # Include session_id in response
+                metadata=UploadDocumentMetadata(
+                    filename=filename,
+                    upload_timestamp=datetime.utcnow().isoformat(),
+                    total_pages=1,
+                    total_chunks=0
+                )
             )
             
         except Exception as e:
-            # Clean up stored document if processing failed
-            if 'doc_id' in locals():
-                try:
-                    document_store.delete_document(doc_id)
-                    print(f"🧹 Cleaned up stored document after error")
-                except Exception as cleanup_error:
-                    print(f"⚠️  Failed to cleanup stored document: {str(cleanup_error)}")
-            
             print(f"❌ Error processing PDF: {str(e)}")
-            raise ValueError(f"Failed to process PDF: {str(e)}") 
+            # Clean up session on failure
+            if session_id:
+                try:
+                    text_cache.remove_document(session_id)
+                    session_manager.cleanup_session(session_id)
+                except:
+                    pass
+            raise ValueError(f"Failed to process PDF: {str(e)}")
+            
+        finally:
+            # Clean up temporary file
+            if temp_path and os.path.exists(temp_path):
+                try:
+                    os.unlink(temp_path)
+                except:
+                    pass 
