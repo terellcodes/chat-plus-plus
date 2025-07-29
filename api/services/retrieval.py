@@ -1,6 +1,7 @@
 """Retrieval service with session-based lazy loading of strategies."""
 
 from typing import List, Dict, Any, Optional, Union
+import traceback
 import logging
 from core.text_cache import text_cache
 from core.session_manager import session_manager
@@ -58,18 +59,23 @@ class RetrievalService:
         # Handle single strategy vs ensemble
         if len(configs) == 1:
             # Single strategy - get or create it lazily
-            config = configs[0]
-            strategy = await session_manager.get_or_create_retriever(
-                session_id=session_id,
-                strategy_name=config.name,
-                document=document,
-                openai_api_key=openai_api_key,
-                **(config.parameters or {}),
-                **kwargs
-            )
-            
-            # Run the strategy
-            result = await strategy.run(message, **kwargs)
+            try:
+                config = configs[0]
+                strategy = await session_manager.get_or_create_retriever(
+                    session_id=session_id,
+                    strategy_name=config.name,
+                    document=document,
+                    openai_api_key=openai_api_key,
+                    **(config.parameters or {}),
+                    **kwargs
+                )
+                
+                # Run the strategy
+                result = await strategy.run(message, **kwargs)
+            except Exception as e:
+                print(f"Error running strategy {config.name}:")
+                print(traceback.format_exc())
+                raise
             
             return {
                 "answer": result["answer"],

@@ -6,12 +6,14 @@ from .bm25 import BM25Retrieval
 from .contextual_compression import ContextualCompressionRetrieval
 from .ensemble import EnsembleRetrieval
 from .naive import NaiveRetrieval
+from .parent_document import ParentDocumentRetrieval
 from .rag_fusion import RAGFusionRetrieval
 # Individual strategies that can be created independently by session manager
 INDIVIDUAL_STRATEGY_REGISTRY: Dict[str, Type[BaseRetrievalStrategy]] = {
     "naive_retrieval": NaiveRetrieval,
     "bm25_retrieval": BM25Retrieval,
     "contextual_compression_retrieval": ContextualCompressionRetrieval,
+    "parent_document_retrieval": ParentDocumentRetrieval,
     "rag_fusion_retrieval": RAGFusionRetrieval,
 }
 

@@ -4,6 +4,8 @@ import time
 import uuid
 import asyncio
 from typing import Dict, Optional, Any, List
+from qdrant_client import QdrantClient, models
+
 try:
     from langchain_core.documents import Document
 except ImportError:
@@ -17,6 +19,7 @@ except ImportError:
     from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Qdrant
 from langchain_openai import OpenAIEmbeddings
+from langchain.storage import InMemoryStore
 
 from chains.strategies import INDIVIDUAL_STRATEGY_REGISTRY, META_STRATEGY_REGISTRY
 from chains.strategies.base import BaseRetrievalStrategy
@@ -47,6 +50,7 @@ class SessionManager:
             'created_at': time.time(),
             'retrievers': {},  # Strategy name -> Strategy instance
             'vector_stores': {},  # Strategy name -> Vector store instance
+            'parent_doc_stores': {},  # Strategy name -> {client, vectorstore, docstore}
             'last_accessed': time.time()
         }
         return session_id
@@ -116,43 +120,93 @@ class SessionManager:
         strategy_class = INDIVIDUAL_STRATEGY_REGISTRY[strategy_name]
         strategy = strategy_class()
         
-        # Check if we already have a vector store for this strategy
-        if strategy_name in session['vector_stores']:
-            vector_store = session['vector_stores'][strategy_name]
-            print(f"🔄 Reusing existing vector store for {strategy_name} in session {session_id}")
+        # Handle parent document retrieval specially
+        if strategy_name == 'parent_document_retrieval':
+            # Check if we already have parent document infrastructure
+            if strategy_name in session['parent_doc_stores']:
+                parent_infrastructure = session['parent_doc_stores'][strategy_name]
+                print(f"🔄 Reusing existing parent document infrastructure for {strategy_name} in session {session_id}")
+            else:
+                # Create new parent document infrastructure
+                print(f"🔧 Creating parent document infrastructure for {strategy_name} in session {session_id}")
+                
+                # Create embeddings for child chunks
+                embeddings = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
+                
+                # Create collection name and Qdrant client
+                collection_name = f"parent_docs_{session_id}"
+                client = QdrantClient(location=":memory:")
+                client.create_collection(
+                    collection_name=collection_name,
+                    vectors_config=models.VectorParams(size=1536, distance=models.Distance.COSINE)
+                )
+                
+                # Create Qdrant vector store for child chunks
+                vectorstore = Qdrant(
+                    client=client,
+                    collection_name=collection_name,
+                    embeddings=embeddings,
+                )
+                
+                # Create InMemoryStore for parent documents
+                docstore = InMemoryStore()
+                
+                # Store the infrastructure for reuse
+                parent_infrastructure = {
+                    'vectorstore': vectorstore,
+                    'docstore': docstore
+                }
+                session['parent_doc_stores'][strategy_name] = parent_infrastructure
+                print(f"✅ Parent document infrastructure created with collection '{collection_name}'")
+            
+            # Setup parent document strategy with special parameters
+            await strategy.setup(
+                vector_store=None,  # Not used by parent document retrieval
+                openai_api_key=openai_api_key,
+                document=document,
+                session_id=session_id,
+                parent_infrastructure=parent_infrastructure,
+                **kwargs
+            )
         else:
-            # Create vector store from document for this strategy
-            print(f"🔧 Creating vector store for strategy {strategy_name} in session {session_id}")
+            # Handle regular strategies with main vector store
+            if strategy_name in session['vector_stores']:
+                vector_store = session['vector_stores'][strategy_name]
+                print(f"🔄 Reusing existing vector store for {strategy_name} in session {session_id}")
+            else:
+                # Create vector store from document for this strategy
+                print(f"🔧 Creating vector store for strategy {strategy_name} in session {session_id}")
+                
+                # Split document into chunks
+                text_splitter = RecursiveCharacterTextSplitter(
+                    chunk_size=getattr(strategy, 'chunk_size', 1000),
+                    chunk_overlap=getattr(strategy, 'chunk_overlap', 200)
+                )
+
+                chunks = text_splitter.split_documents([document])
+
+                # Create embeddings
+                embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+                
+                # Create vector store
+                vector_store = Qdrant.from_documents(
+                    chunks,
+                    embeddings,
+                    location=":memory:",  # In-memory for session-based usage
+                    collection_name=f"session_{session_id}_{strategy_name}",
+                )
+                
+                # Cache the vector store
+                session['vector_stores'][strategy_name] = vector_store
+                print(f"✅ Vector store created with {len(chunks)} chunks for {strategy_name}")
             
-            # Split document into chunks
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=getattr(strategy, 'chunk_size', 1000),
-                chunk_overlap=getattr(strategy, 'chunk_overlap', 200)
+            # Setup regular strategy with the vector store
+            await strategy.setup(
+                vector_store=vector_store,
+                openai_api_key=openai_api_key,
+                document=document,
+                **kwargs
             )
-            chunks = text_splitter.split_documents([document])
-            
-            # Create embeddings
-            embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
-            
-            # Create vector store
-            vector_store = Qdrant.from_documents(
-                chunks,
-                embeddings,
-                location=":memory:",  # In-memory for session-based usage
-                collection_name=f"session_{session_id}_{strategy_name}",
-            )
-            
-            # Cache the vector store
-            session['vector_stores'][strategy_name] = vector_store
-            print(f"✅ Vector store created with {len(chunks)} chunks for {strategy_name}")
-        
-        # Setup strategy with the vector store
-        await strategy.setup(
-            vector_store=vector_store,
-            openai_api_key=openai_api_key,
-            document=document,
-            **kwargs
-        )
         
         # Cache the retriever for future use
         session['retrievers'][strategy_name] = strategy
@@ -184,6 +238,21 @@ class SessionManager:
                     pass
                 except Exception as e:
                     print(f"Error cleaning up vector store: {e}")
+            
+            # Clean up parent document infrastructure
+            for parent_infrastructure in session.get('parent_doc_stores', {}).values():
+                try:
+                    # Clean up Qdrant vector store (in-memory auto-cleanup)
+                    vectorstore = parent_infrastructure.get('vectorstore')
+                    # Qdrant in-memory stores don't need explicit cleanup
+                    
+                    # Clean up InMemoryStore (no explicit cleanup needed)
+                    docstore = parent_infrastructure.get('docstore')
+                    # InMemoryStore doesn't need explicit cleanup
+                    
+                    print(f"🧹 Cleaned up parent document infrastructure")
+                except Exception as e:
+                    print(f"Error cleaning up parent doc infrastructure: {e}")
             
             del self._sessions[session_id]
     
@@ -217,7 +286,8 @@ class SessionManager:
                 'last_accessed': session['last_accessed'],
                 'age_seconds': current_time - session['created_at'],
                 'retrievers': list(session['retrievers'].keys()),
-                'vector_stores': list(session['vector_stores'].keys())
+                'vector_stores': list(session['vector_stores'].keys()),
+                'parent_doc_stores': list(session.get('parent_doc_stores', {}).keys())
             }
             for session_id, session in self._sessions.items()
         }

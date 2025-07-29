@@ -3,12 +3,47 @@ import tempfile
 import os
 from datetime import datetime
 from typing import BinaryIO, Optional, List
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders.pdf import PyPDFLoader
 from langchain_core.documents import Document
 
 from core.text_cache import text_cache
 from core.session_manager import session_manager
 from models.schemas.document import UploadDocumentResponse, UploadDocumentMetadata
+
+def load_pdf_as_single_document(file_path: str, page_separator: str = "\n\n") -> Document:
+    """
+    Load PDF and combine all pages into a single Document.
+    
+    Args:
+        file_path: Path to the PDF file
+        page_separator: String to separate pages (default: double newline)
+    
+    Returns:
+        Single Document with combined content
+    """
+    # Load PDF (returns one Document per page)
+    loader = PyPDFLoader(file_path)
+    pages = loader.load()
+    
+    if not pages:
+        raise ValueError(f"No pages found in PDF: {file_path}")
+    
+    # Combine all page contents
+    combined_content = page_separator.join([page.page_content for page in pages])
+    
+    # Create metadata from first page, add total pages
+    combined_metadata = pages[0].metadata.copy()
+    combined_metadata.update({
+        "total_pages": len(pages),
+        "combined_from_pages": True,
+        "page": None  # Remove individual page number
+    })
+    
+    # Create single Document
+    return Document(
+        page_content=combined_content,
+        metadata=combined_metadata
+    )
 
 class DocumentService:
     """Service for handling document operations with session-based text caching"""
@@ -48,29 +83,12 @@ class DocumentService:
                 temp_path = tmp_file.name
             
             print("📚 Loading PDF with LangChain PyPDFLoader...")
-            
-            # Use LangChain's optimized PDF loader
-            loader = PyPDFLoader(
-                file_path=temp_path,
-            )
-            
+                    
             # Load document - this is much faster than manual parsing
-            documents = loader.load()
+            document = load_pdf_as_single_document(temp_path)
             
-            if not documents:
-                raise ValueError("No content extracted from PDF")
-                
-            # Get the single document (in "single" mode)
-            document = documents[0]
-            
-            # Update metadata with our information
-            document.metadata.update({
-                "source": filename,
-                "document_id": str(uuid.uuid4()),
-                "upload_timestamp": datetime.utcnow().isoformat(),
-                "session_id": session_id
-            })
-            
+            if not document:
+                raise ValueError("No content extracted from PDF")          
             print(f"✅ PDF loaded successfully. Content length: {len(document.page_content)} characters")
             
             # Cache the document text for lazy retriever creation
